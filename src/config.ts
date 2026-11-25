@@ -49,6 +49,16 @@ export default {
     // Replaced by `slop/no-conditional-spread`, which also reports the `cond && { key }` form the
     // upstream rule misses, and leaves `cond ? existingObject : {}` fallbacks alone.
     'quality/no-conditional-empty-object-spread': 'off',
+    // Effect code uses local modules as namespaces (`Body.cancelResponseBody`, `Policy.validate…`),
+    // the same style as Effect's own modules; the call site then names where a function lives.
+    'import/no-namespace': 'off',
+    // The rule counts arguments on any `.then`/`.catch`/`.finally` call without type information,
+    // so it reports Effect's data-first form `Effect.catch(effect, handler)`. TypeScript already
+    // rejects wrong argument counts on real Promise methods.
+    'promise/valid-params': 'off',
+    // In Effect, `error` is the typed failure and `cause` is the full `Cause` (defects,
+    // interruptions); both names carry meaning, so both are accepted.
+    'unicorn/catch-error-name': ['error', { name: 'error', ignore: ['^cause$'] }],
     'typescript/no-explicit-any': 'error',
     'typescript/no-unsafe-assignment': 'error',
     'typescript/no-unsafe-call': 'error',

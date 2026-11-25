@@ -82,6 +82,7 @@ export default defineConfig({
 - Size limits: complexity 14, depth 4, 4 parameters, 350 lines per file, 100 lines per function.
 - Kebab-case file names, no barrel files, and no import cycles.
 - A `no-restricted-imports` rule banning Zod (use Effect Schema) and `../../../` imports.
+- Effect idioms that Cloudflare's rules would report stay allowed: namespace imports of local modules (`import * as Body from './body.ts'`), data-first calls such as `Effect.catch(effect, handler)`, and `cause` as well as `error` for rejection handler parameters.
 - In `*.test.*` and `*.spec.*` files: the vitest plugin, no size limits, and no fixed sleeps. Tests, stories, fixtures, `.d.ts` files and `vite.config.ts` don't need JSDoc.
 
 **Format** (`fmtConfig`):
