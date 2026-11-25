@@ -14,7 +14,7 @@ concurrency:
 
 env:
   NODE_VERSION: '26'
-  PNPM_VERSION: 12.16.1 # keep in sync with devEngines.packageManager in package.json
+  PNPM_VERSION: 12.23.0 # keep in sync with devEngines.packageManager in package.json
   NPM_VERSION: 12.2.3 # npm with trusted publishing support
   TARBALL: oxlint-config.tgz
 
