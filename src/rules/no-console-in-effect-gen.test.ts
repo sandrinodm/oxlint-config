@@ -16,6 +16,12 @@ const ruleTester = new RuleTester({
 
 ruleTester.run('no-console-in-effect-gen', noConsoleInEffectGen, {
   valid: [
+    // A local `Effect` that is not imported from `effect` is ignored
+    `const Effect = { gen: (f: () => unknown) => f };
+const program = Effect.gen(function* () {
+  throw new Error('x');
+  console.log('x');
+});`,
     // Effect.log* and Effect Console.log are valid
     `const program = Effect.gen(function* () {
   yield* Effect.logInfo('starting');
@@ -34,26 +40,30 @@ ruleTester.run('no-console-in-effect-gen', noConsoleInEffectGen, {
   ],
   invalid: [
     {
-      code: `const program = Effect.gen(function* () {
+      code: `import { Effect } from 'effect';
+const program = Effect.gen(function* () {
   console.log('hello');
 });`,
       errors: [{ messageId: 'noConsole' }],
     },
     {
-      code: `const program = Effect.gen(function* () {
+      code: `import { Effect } from 'effect';
+const program = Effect.gen(function* () {
   console.warn('warning');
   console.error('failure');
 });`,
       errors: [{ messageId: 'noConsole' }, { messageId: 'noConsole' }],
     },
     {
-      code: `const program = Effect.fn('sync')(function* () {
+      code: `import { Effect } from 'effect';
+const program = Effect.fn('sync')(function* () {
   console.info('syncing');
 });`,
       errors: [{ messageId: 'noConsole' }],
     },
     {
-      code: `const program = Effect.gen(function* () {
+      code: `import { Effect } from 'effect';
+const program = Effect.gen(function* () {
   yield* runWithCallback({
     onProgress: (line) => {
       console.log(line);
@@ -63,7 +73,8 @@ ruleTester.run('no-console-in-effect-gen', noConsoleInEffectGen, {
       errors: [{ messageId: 'noConsole' }],
     },
     {
-      code: `const program = Effect.gen(function* () {
+      code: `import { Effect } from 'effect';
+const program = Effect.gen(function* () {
   console['debug']('computed');
 });`,
       errors: [{ messageId: 'noConsole' }],

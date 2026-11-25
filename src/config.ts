@@ -59,6 +59,9 @@ export default {
     // In Effect, `error` is the typed failure and `cause` is the full `Cause` (defects,
     // interruptions); both names carry meaning, so both are accepted.
     'unicorn/catch-error-name': ['error', { name: 'error', ignore: ['^cause$'] }],
+    // `Effect.gen(function* () { return value })` is legitimate Effect; Effect's own lint config
+    // turns this rule off.
+    'eslint/require-yield': 'off',
     'typescript/no-explicit-any': 'error',
     'typescript/no-unsafe-assignment': 'error',
     'typescript/no-unsafe-call': 'error',
@@ -127,6 +130,10 @@ export default {
     'slop/blank-line-after-if': 'error',
     'slop/no-throw-in-effect-gen': 'error',
     'slop/no-console-in-effect-gen': 'error',
+    'slop/effect-fn-conventions': 'error',
+    'slop/no-effect-run-outside-entry': 'error',
+    'slop/no-silent-catch': 'error',
+    'slop/no-unbounded-retry': 'error',
     'slop/no-banner-comments': 'error',
     'slop/no-history-comments': 'error',
     'slop/require-jsdoc': [
@@ -138,6 +145,13 @@ export default {
     ],
   },
   overrides: [
+    {
+      // Entrypoints and scripts are where effects are meant to run.
+      files: ['**/main.{ts,tsx,mts,js,mjs}', '**/bin/**', '**/scripts/**'],
+      rules: {
+        'slop/no-effect-run-outside-entry': 'off',
+      },
+    },
     {
       files: [
         '**/*.test.{ts,tsx}',

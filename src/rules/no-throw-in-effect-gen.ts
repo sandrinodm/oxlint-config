@@ -19,7 +19,7 @@ export const noThrowInEffectGen = defineRule({
   create(context) {
     return {
       ThrowStatement(node) {
-        if (isDirectlyInsideEffectGenerator(node)) {
+        if (isDirectlyInsideEffectGenerator(context.sourceCode, node)) {
           context.report({ node, messageId: 'noThrow' });
         }
       },

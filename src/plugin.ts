@@ -1,18 +1,22 @@
 import { definePlugin } from 'vite-plus/lint/plugins';
 
 import { blankLineAfterIf } from './rules/blank-line-after-if.ts';
+import { effectFnConventions } from './rules/effect-fn-conventions.ts';
 import { kebabCaseImports } from './rules/kebab-case-imports.ts';
 import { noBannerComments } from './rules/no-banner-comments.ts';
 import { noChainedTypeAssertions } from './rules/no-chained-type-assertions.ts';
 import { noConditionalSpread } from './rules/no-conditional-spread.ts';
 import { noConsoleInEffectGen } from './rules/no-console-in-effect-gen.ts';
 import { noDisableSafetyRules } from './rules/no-disable-safety-rules.ts';
+import { noEffectRunOutsideEntry } from './rules/no-effect-run-outside-entry.ts';
 import { noFixedSleepInTests } from './rules/no-fixed-sleep-in-tests.ts';
 import { noHistoryComments } from './rules/no-history-comments.ts';
 import { noInstanceof } from './rules/no-instanceof.ts';
 import { noRawJsonParse } from './rules/no-raw-json-parse.ts';
+import { noSilentCatch } from './rules/no-silent-catch.ts';
 import { noTestsDirectory } from './rules/no-tests-directory.ts';
 import { noThrowInEffectGen } from './rules/no-throw-in-effect-gen.ts';
+import { noUnboundedRetry } from './rules/no-unbounded-retry.ts';
 import { requireJsDoc } from './rules/require-jsdoc.ts';
 
 /**
@@ -33,6 +37,10 @@ export default definePlugin({
     'blank-line-after-if': blankLineAfterIf,
     'no-throw-in-effect-gen': noThrowInEffectGen,
     'no-console-in-effect-gen': noConsoleInEffectGen,
+    'effect-fn-conventions': effectFnConventions,
+    'no-effect-run-outside-entry': noEffectRunOutsideEntry,
+    'no-silent-catch': noSilentCatch,
+    'no-unbounded-retry': noUnboundedRetry,
     'no-banner-comments': noBannerComments,
     'no-history-comments': noHistoryComments,
     'require-jsdoc': requireJsDoc,

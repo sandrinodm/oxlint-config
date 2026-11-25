@@ -1,7 +1,9 @@
-import type { ESTree } from 'vite-plus/lint/plugins';
+import type { ESTree, SourceCode } from 'vite-plus/lint/plugins';
+
+import { isEffectMember } from './effect-imports.ts';
 
 /**
- * `Effect` namespace factory method names (`gen`, `fn`, `fnUntraced`) that evaluate a generator
+ * `Effect` module factory method names (`gen`, `fn`, `fnUntraced`) that evaluate a generator
  * function as an Effect workflow.
  */
 const EFFECT_GENERATOR_METHODS = new Set(['gen', 'fn', 'fnUntraced']);
@@ -17,32 +19,17 @@ const FUNCTION_NODE_TYPES = new Set([
 ]);
 
 /**
- * Returns `true` when `callee` is a non-computed `Effect.<method>` member expression whose property
- * name is in `allowedMethods`.
- */
-const isEffectMemberCall = (
-  callee: ESTree.Expression,
-  allowedMethods: ReadonlySet<string>,
-): boolean =>
-  callee.type === 'MemberExpression' &&
-  !callee.computed &&
-  callee.object.type === 'Identifier' &&
-  callee.object.name === 'Effect' &&
-  callee.property.type === 'Identifier' &&
-  allowedMethods.has(callee.property.name);
-
-/**
  * Matches direct (`Effect.gen(...)`, `Effect.fnUntraced(...)`) and curried traced
  * (`Effect.fn('span')(...)`) invocations of an Effect generator builder.
  */
-const isEffectGeneratorCall = (call: ESTree.CallExpression): boolean => {
-  if (isEffectMemberCall(call.callee, EFFECT_GENERATOR_METHODS)) {
+const isEffectGeneratorCall = (sourceCode: SourceCode, call: ESTree.CallExpression): boolean => {
+  if (isEffectMember(sourceCode, call.callee, 'Effect', EFFECT_GENERATOR_METHODS)) {
     return true;
   }
 
   return (
     call.callee.type === 'CallExpression' &&
-    isEffectMemberCall(call.callee.callee, EFFECT_GENERATOR_METHODS)
+    isEffectMember(sourceCode, call.callee.callee, 'Effect', EFFECT_GENERATOR_METHODS)
   );
 };
 
@@ -50,7 +37,7 @@ const isEffectGeneratorCall = (call: ESTree.CallExpression): boolean => {
  * Returns `true` when `node` is a generator `FunctionExpression` passed directly as an argument to
  * an `Effect.gen` / `Effect.fn` / `Effect.fnUntraced` call.
  */
-const isEffectGeneratorFunction = (node: ESTree.Node): boolean => {
+const isEffectGeneratorFunction = (sourceCode: SourceCode, node: ESTree.Node): boolean => {
   if (node.type !== 'FunctionExpression' || !node.generator) {
     return false;
   }
@@ -60,18 +47,21 @@ const isEffectGeneratorFunction = (node: ESTree.Node): boolean => {
     return false;
   }
 
-  return parent.arguments.includes(node) && isEffectGeneratorCall(parent);
+  return parent.arguments.includes(node) && isEffectGeneratorCall(sourceCode, parent);
 };
 
 /**
  * Walks up to the nearest enclosing function boundary and returns `true` only when that immediate
  * function is an Effect generator, exempting nested callbacks such as `Effect.try(() => ...)`.
  */
-export const isDirectlyInsideEffectGenerator = (node: ESTree.Node): boolean => {
+export const isDirectlyInsideEffectGenerator = (
+  sourceCode: SourceCode,
+  node: ESTree.Node,
+): boolean => {
   let current: ESTree.Node | null = node.parent;
   while (current !== null) {
     if (FUNCTION_NODE_TYPES.has(current.type)) {
-      return isEffectGeneratorFunction(current);
+      return isEffectGeneratorFunction(sourceCode, current);
     }
 
     current = current.parent;
@@ -84,10 +74,10 @@ export const isDirectlyInsideEffectGenerator = (node: ESTree.Node): boolean => {
  * Walks the entire ancestor chain of `node` and returns `true` if any enclosing scope is an Effect
  * generator function, including through nested arrow functions or callbacks.
  */
-export const hasAncestorEffectGenerator = (node: ESTree.Node): boolean => {
+export const hasAncestorEffectGenerator = (sourceCode: SourceCode, node: ESTree.Node): boolean => {
   let current: ESTree.Node | null = node.parent;
   while (current !== null) {
-    if (isEffectGeneratorFunction(current)) {
+    if (isEffectGeneratorFunction(sourceCode, current)) {
       return true;
     }
 

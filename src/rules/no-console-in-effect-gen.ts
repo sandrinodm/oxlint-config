@@ -20,7 +20,7 @@ export const noConsoleInEffectGen = defineRule({
     return {
       CallExpression(node) {
         const method = getConsoleMethodName(node.callee);
-        if (method !== null && hasAncestorEffectGenerator(node)) {
+        if (method !== null && hasAncestorEffectGenerator(context.sourceCode, node)) {
           context.report({
             node,
             messageId: 'noConsole',

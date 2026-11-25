@@ -16,6 +16,12 @@ const ruleTester = new RuleTester({
 
 ruleTester.run('no-throw-in-effect-gen', noThrowInEffectGen, {
   valid: [
+    // A local `Effect` that is not imported from `effect` is ignored
+    `const Effect = { gen: (f: () => unknown) => f };
+const program = Effect.gen(function* () {
+  throw new Error('x');
+  console.log('x');
+});`,
     // Returning typed errors via yield* is valid
     `const program = Effect.gen(function* () {
   const valid = yield* check();
@@ -54,7 +60,8 @@ ruleTester.run('no-throw-in-effect-gen', noThrowInEffectGen, {
   ],
   invalid: [
     {
-      code: `const program = Effect.gen(function* () {
+      code: `import { Effect } from 'effect';
+const program = Effect.gen(function* () {
   if (!ready) {
     throw new Error('not ready');
   }
@@ -64,7 +71,8 @@ ruleTester.run('no-throw-in-effect-gen', noThrowInEffectGen, {
       errors: [{ messageId: 'noThrow' }],
     },
     {
-      code: `const program = Effect.fn('loadUser')(function* (id: string) {
+      code: `import { Effect } from 'effect';
+const program = Effect.fn('loadUser')(function* (id: string) {
   if (id.length === 0) {
     throw new Error('missing id');
   }
@@ -74,13 +82,15 @@ ruleTester.run('no-throw-in-effect-gen', noThrowInEffectGen, {
       errors: [{ messageId: 'noThrow' }],
     },
     {
-      code: `const program = Effect.fn(function* (id: string) {
+      code: `import { Effect } from 'effect';
+const program = Effect.fn(function* (id: string) {
   throw new Error(id);
 });`,
       errors: [{ messageId: 'noThrow' }],
     },
     {
-      code: `const program = Effect.gen(self, function* () {
+      code: `import { Effect } from 'effect';
+const program = Effect.gen(self, function* () {
   throw new Error('bound self');
 });`,
       errors: [{ messageId: 'noThrow' }],
