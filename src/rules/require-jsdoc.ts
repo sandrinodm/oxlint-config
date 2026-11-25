@@ -195,7 +195,9 @@ const inspectDeclaration = (
 };
 
 /**
- * Port of `sandrinodm/jsdoc-lint` requiring multiline JSDoc on declarations, members, and schemas.
+ * Oxlint suggestion rule (`slop/require-jsdoc`) requiring a multiline JSDoc block on declarations,
+ * members, and optionally Drizzle, Zod, and Effect Schema properties. Reports single-line blocks
+ * and autofixes the missing blank line after a documented member.
  */
 export const requireJsDoc = defineRule({
   meta: {
