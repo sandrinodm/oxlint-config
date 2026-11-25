@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve `@sandrinodm/oxlint-config`.
+Thanks for helping improve `@yieldkit/oxlint-config`.
 
 ## Setup
 
