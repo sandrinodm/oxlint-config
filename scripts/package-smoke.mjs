@@ -55,21 +55,26 @@ writeFileSync(
   JSON.stringify({ name: 'consumer', private: true, type: 'module' }, null, 2),
 );
 
-execFileSync(
-  'npm',
-  [
-    'install',
-    '--no-audit',
-    '--no-fund',
-    resolve(tarball),
-    `vite-plus@${installedVersion('vite-plus')}`,
-    `typescript@${installedVersion('typescript')}`,
-    `@types/node@${installedVersion('@types/node')}`,
-    `effect@${installedVersion('effect')}`,
-    `@effect/tsgo@${installedVersion('@effect/tsgo')}`,
-  ],
-  { cwd: consumer, stdio: 'inherit', timeout: INSTALL_TIMEOUT_MS },
-);
+/**
+ * Installs packages into the consumer. Dependencies resolve outside the lockfile here, so install
+ * scripts stay off.
+ */
+const npmInstall = (packages) =>
+  execFileSync('npm', ['install', '--no-audit', '--no-fund', '--ignore-scripts', ...packages], {
+    cwd: consumer,
+    stdio: 'inherit',
+    timeout: INSTALL_TIMEOUT_MS,
+  });
+
+// The base preset must work without the optional `@effect/tsgo` peer, which is installed later
+// for the `effect` export.
+npmInstall([
+  resolve(tarball),
+  `vite-plus@${installedVersion('vite-plus')}`,
+  `typescript@${installedVersion('typescript')}`,
+  `@types/node@${installedVersion('@types/node')}`,
+  `effect@${installedVersion('effect')}`,
+]);
 
 /**
  * Where npm installed the package under test inside the consumer.
@@ -259,6 +264,8 @@ assert.doesNotMatch(
 );
 
 // The `effect` export: Effect's type-aware rules through the `effect-tsgo` wrapper.
+npmInstall([`@effect/tsgo@${installedVersion('@effect/tsgo')}`]);
+
 writeFileSync(
   join(consumer, 'vite.config.ts'),
   `import effectConfig from '${sourceManifest.name}/effect';
