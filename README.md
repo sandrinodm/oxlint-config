@@ -1,8 +1,8 @@
-# @sandrinodm/oxlint-config
+# @yieldkit/oxlint-config
 
-[![npm](https://img.shields.io/npm/v/@sandrinodm/oxlint-config)](https://www.npmjs.com/package/@sandrinodm/oxlint-config)
-[![CI](https://github.com/sandrinodm/oxlint-config/actions/workflows/ci.yml/badge.svg)](https://github.com/sandrinodm/oxlint-config/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/@sandrinodm/oxlint-config)](./LICENSE)
+[![npm](https://img.shields.io/npm/v/@yieldkit/oxlint-config)](https://www.npmjs.com/package/@yieldkit/oxlint-config)
+[![CI](https://github.com/yieldkit/oxlint-config/actions/workflows/ci.yml/badge.svg)](https://github.com/yieldkit/oxlint-config/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/@yieldkit/oxlint-config)](./LICENSE)
 
 A strict Oxlint and Oxfmt preset for [Vite+](https://viteplus.dev). It is aimed at TypeScript and Effect codebases where a lot of the code is written by AI agents.
 
@@ -17,7 +17,7 @@ The preset:
 ## Install
 
 ```sh
-pnpm add -D @sandrinodm/oxlint-config
+pnpm add -D @yieldkit/oxlint-config
 ```
 
 Requires `vite-plus` 1.7.0 or later. Node.js 22.18+, 24.11+ or 26+, the same range as Vite+.
@@ -27,7 +27,7 @@ Requires `vite-plus` 1.7.0 or later. Node.js 22.18+, 24.11+ or 26+, the same ran
 Spread the presets into the root `vite.config.ts`:
 
 ```ts
-import oxlintConfig, { fmtConfig } from '@sandrinodm/oxlint-config';
+import oxlintConfig, { fmtConfig } from '@yieldkit/oxlint-config';
 import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
@@ -45,7 +45,7 @@ Spread the preset into `lint` rather than listing it under `extends`, so `option
 The preset knows nothing about your repository. Paths, package boundaries and workspace scopes belong in your own config:
 
 ```ts
-import oxlintConfig, { fmtConfig, restrictedImportsOverride } from '@sandrinodm/oxlint-config';
+import oxlintConfig, { fmtConfig, restrictedImportsOverride } from '@yieldkit/oxlint-config';
 import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
@@ -91,13 +91,13 @@ It enables Effect's `recommended` set, the rest of its correctness and anti-patt
 ### Set up
 
 ```sh
-pnpm add -D @sandrinodm/oxlint-config @effect/tsgo
+pnpm add -D @yieldkit/oxlint-config @effect/tsgo
 ```
 
 ```ts
 // vite.config.ts
-import { fmtConfig } from '@sandrinodm/oxlint-config';
-import effectConfig from '@sandrinodm/oxlint-config/effect';
+import { fmtConfig } from '@yieldkit/oxlint-config';
+import effectConfig from '@yieldkit/oxlint-config/effect';
 import { defineConfig } from 'vite-plus';
 
 export default defineConfig({

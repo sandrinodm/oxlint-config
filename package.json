@@ -1,5 +1,5 @@
 {
-  "name": "@sandrinodm/oxlint-config",
+  "name": "@yieldkit/oxlint-config",
   "version": "0.3.0",
   "description": "Strict Oxlint and Oxfmt preset for Vite+: the Cloudflare rules, type-aware checks and custom slop/* rules against low-evidence TypeScript.",
   "keywords": [
@@ -12,12 +12,12 @@
     "typescript",
     "vite-plus"
   ],
-  "homepage": "https://github.com/sandrinodm/oxlint-config#readme",
-  "bugs": "https://github.com/sandrinodm/oxlint-config/issues",
+  "homepage": "https://github.com/yieldkit/oxlint-config#readme",
+  "bugs": "https://github.com/yieldkit/oxlint-config/issues",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sandrinodm/oxlint-config.git"
+    "url": "git+https://github.com/yieldkit/oxlint-config.git"
   },
   "files": [
     "dist",

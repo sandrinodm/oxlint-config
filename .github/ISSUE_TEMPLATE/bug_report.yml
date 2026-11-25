@@ -6,7 +6,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: '@sandrinodm/oxlint-config version'
+      label: '@yieldkit/oxlint-config version'
       placeholder: 0.1.0
     validations:
       required: true
