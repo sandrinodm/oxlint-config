@@ -11,7 +11,8 @@ The preset:
 - extends [`@cloudflare/oxlint-config`](https://github.com/cloudflare/oxlint-config)
 - turns the `correctness`, `suspicious` and `perf` categories on as errors
 - enables type-aware linting with `typeCheck`
-- adds fourteen `slop/*` rules for patterns built-in rules don't catch: chained type assertions, raw `JSON.parse`, `throw` inside `Effect.gen`, comments about plans and tickets, missing JSDoc, and more
+- adds eighteen `slop/*` rules for patterns built-in rules don't catch: chained type assertions, raw `JSON.parse`, `throw` inside `Effect.gen`, unbounded retries, comments about plans and tickets, missing JSDoc, and more
+- optionally turns on Effect's own type-aware rules from [`@effect/tsgo`](https://github.com/Effect-TS/tsgo) through the `/effect` export, which catches floating Effects, leaked requirements and other mistakes that need type information (see [Effect](#effect))
 
 ## Install
 
@@ -73,6 +74,68 @@ export default defineConfig({
 
 `restrictedImportsOverride(files, patterns)` adds import bans for some files and keeps the preset's base bans (`zod` and `../../../`). An override that sets `no-restricted-imports` by hand would replace them.
 
+## Effect
+
+The `/effect` export is the full preset plus Effect's own lint rules, maintained by the Effect team in [`@effect/tsgo`](https://github.com/Effect-TS/tsgo). Those rules use type information, so they catch what a syntactic rule cannot:
+
+- an Effect that is created but never yielded or run (`floating-effect`)
+- `yield` without `*`, and a failure yielded without `return yield*`
+- returning an Effect from a generator, which nests it as `Effect<Effect<…>>`
+- service methods that leak their dependencies into the requirements channel
+- catching on an Effect that cannot fail, and global `Error` or `unknown` in the error channel
+- `try`/`catch`, `Effect.run*`, `Promise.all`, `Date`, `Math.random`, `process.env`, `fetch`, timers, `console` and `JSON` inside Effect code
+- chained `Effect.provide` calls, providing layers outside entrypoints, and v3 APIs that v4 removed or renamed
+
+It enables Effect's `recommended` set, the rest of its correctness and anti-pattern categories, and the in-Effect platform rules (114 rules), all as errors. The platform rules apply inside Effect code only, so plain helpers can still use `Date` or `console`. Tests and entrypoints may provide layers directly.
+
+### Set up
+
+```sh
+pnpm add -D @sandrinodm/oxlint-config @effect/tsgo
+```
+
+```ts
+// vite.config.ts
+import { fmtConfig } from '@sandrinodm/oxlint-config';
+import effectConfig from '@sandrinodm/oxlint-config/effect';
+import { defineConfig } from 'vite-plus';
+
+export default defineConfig({
+  fmt: fmtConfig,
+  lint: effectConfig,
+});
+```
+
+Run lint through Effect's wrapper, which loads the patched Oxlint binding that provides the `effecttsgo` plugin:
+
+```json
+{
+  "scripts": {
+    "check": "effect-tsgo vp check",
+    "lint": "effect-tsgo vp lint"
+  }
+}
+```
+
+Plain `vp lint` fails with `Unknown plugin: 'effecttsgo'`, so run CI and any `staged` task through the wrapper too, for example `staged: { '*': 'effect-tsgo vp check --fix' }`.
+
+Things to know:
+
+- `@effect/tsgo` pins exact Oxlint, tsrs and TypeScript versions. After upgrading `vite-plus` or `typescript`, wait for a matching `@effect/tsgo` release. Its `peerDependency` range here is `^0.73.4`.
+- It ships native builds for Linux, macOS and Windows (x64 and arm64), but not for Linux musl (Alpine).
+- For editor diagnostics, follow the [`@effect/tsgo` setup](https://github.com/Effect-TS/tsgo#readme) and set `"diagnostics": false` in its tsconfig plugin entry so Effect diagnostics aren't reported twice.
+
+To change a rule, override it like any other:
+
+```ts
+lint: {
+  ...effectConfig,
+  rules: { ...effectConfig.rules, 'effecttsgo/missing-concurrency-option': 'off' },
+},
+```
+
+Rule reference: [Effect-TS/tsgo/docs/rules](https://github.com/Effect-TS/tsgo/tree/main/docs/rules).
+
 ## What the preset sets
 
 **Lint** (`default` export):
@@ -82,7 +145,8 @@ export default defineConfig({
 - Size limits: complexity 14, depth 4, 4 parameters, 350 lines per file, 100 lines per function.
 - Kebab-case file names, no barrel files, and no import cycles.
 - A `no-restricted-imports` rule banning Zod (use Effect Schema) and `../../../` imports.
-- Effect idioms that Cloudflare's rules would report stay allowed: namespace imports of local modules (`import * as Body from './body.ts'`), data-first calls such as `Effect.catch(effect, handler)`, and `cause` as well as `error` for rejection handler parameters.
+- Effect conventions from the `slop/*` rules: named `Effect.fn` spans, `Effect.run*` only in entrypoints, no catch-all handlers that swallow failures, no retry policies that never stop. They only apply to names imported from `effect`, `effect/*` or `@effect/*`.
+- Effect idioms that Cloudflare's rules would report stay allowed: `Effect.gen` without `yield` (`eslint/require-yield` is off), namespace imports of local modules (`import * as Body from './body.ts'`), data-first calls such as `Effect.catch(effect, handler)`, and `cause` as well as `error` for rejection handler parameters.
 - In `*.test.*` and `*.spec.*` files: the vitest plugin, no size limits, and no fixed sleeps. Tests, stories, fixtures, `.d.ts` files and `vite.config.ts` don't need JSDoc.
 
 **Format** (`fmtConfig`):
@@ -95,22 +159,26 @@ export default defineConfig({
 
 ## Rules
 
-| Rule                              | Reports                                                               | Options                                  |
-| --------------------------------- | --------------------------------------------------------------------- | ---------------------------------------- |
-| `slop/no-chained-type-assertions` | `x as unknown as T`                                                   |                                          |
-| `slop/no-disable-safety-rules`    | inline disables of type-safety and test-integrity rules               |                                          |
-| `slop/no-raw-json-parse`          | `JSON.parse` instead of Effect Schema decoding                        |                                          |
-| `slop/no-instanceof`              | `instanceof` against package or app classes (allows global built-ins) | `allow`                                  |
-| `slop/no-conditional-spread`      | spreads that add or omit keys based on a condition (`? : {}`, `&&`)   |                                          |
-| `slop/no-fixed-sleep-in-tests`    | `setTimeout` / `Bun.sleep` in tests                                   |                                          |
-| `slop/kebab-case-imports`         | non-kebab-case local import paths                                     | `workspaceScopes`                        |
-| `slop/no-tests-directory`         | `__tests__` directories, and imports through them                     | `workspaceScopes`                        |
-| `slop/blank-line-after-if`        | a missing blank line after a control block                            |                                          |
-| `slop/no-throw-in-effect-gen`     | `throw` inside `Effect.gen` / `Effect.fn`                             |                                          |
-| `slop/no-console-in-effect-gen`   | `console.*` inside Effect generators                                  |                                          |
-| `slop/no-banner-comments`         | divider and `#region` comments                                        |                                          |
-| `slop/no-history-comments`        | comments about plans, tickets or past changes                         |                                          |
-| `slop/require-jsdoc`              | missing multiline JSDoc on declarations, members, schemas             | `require{Zod,EffectSchema,Drizzle}JsDoc` |
+| Rule                               | Reports                                                                                                                    | Options                                  |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `slop/no-chained-type-assertions`  | `x as unknown as T`                                                                                                        |                                          |
+| `slop/no-disable-safety-rules`     | inline disables of type-safety and test-integrity rules                                                                    |                                          |
+| `slop/no-raw-json-parse`           | `JSON.parse` instead of Effect Schema decoding                                                                             |                                          |
+| `slop/no-instanceof`               | `instanceof` against package or app classes (allows global built-ins)                                                      | `allow`                                  |
+| `slop/no-conditional-spread`       | spreads that add or omit keys based on a condition (`? : {}`, `&&`)                                                        |                                          |
+| `slop/no-fixed-sleep-in-tests`     | `setTimeout` / `Bun.sleep` in tests                                                                                        |                                          |
+| `slop/kebab-case-imports`          | non-kebab-case local import paths                                                                                          | `workspaceScopes`                        |
+| `slop/no-tests-directory`          | `__tests__` directories, and imports through them                                                                          | `workspaceScopes`                        |
+| `slop/blank-line-after-if`         | a missing blank line after a control block                                                                                 |                                          |
+| `slop/no-throw-in-effect-gen`      | `throw` inside `Effect.gen` / `Effect.fn`                                                                                  |                                          |
+| `slop/no-console-in-effect-gen`    | `console.*` inside Effect generators                                                                                       |                                          |
+| `slop/effect-fn-conventions`       | `Effect.fn` without a span name, a span name that doesn't match its binding, `.pipe` on an `Effect.fn` function            | `matchName`                              |
+| `slop/no-effect-run-outside-entry` | `Effect.run*` and `ManagedRuntime.make` outside entrypoints (`main.*`, `bin/`, `scripts/`)                                 |                                          |
+| `slop/no-silent-catch`             | `Effect.catch`, `catchCause` or `catchDefect` with a handler that returns a constant (`Effect.void`, `Effect.succeed([])`) |                                          |
+| `slop/no-unbounded-retry`          | `Effect.retry` with a policy that never stops (`Schedule.forever`, a bare `Schedule.exponential`)                          |                                          |
+| `slop/no-banner-comments`          | divider and `#region` comments                                                                                             |                                          |
+| `slop/no-history-comments`         | comments about plans, tickets or past changes                                                                              |                                          |
+| `slop/require-jsdoc`               | missing multiline JSDoc on declarations, members, schemas                                                                  | `require{Zod,EffectSchema,Drizzle}JsDoc` |
 
 `slop/no-instanceof` replaces Cloudflare's `@nkzw/no-instanceof`. That rule bans built-ins such as `Date` and `HTMLElement`, but exempts any bare identifier ending in `Error` or `Exception`, so `instanceof HttpRequestError` passes. This rule turns that around:
 
@@ -156,6 +224,13 @@ export function omitUndefined<T extends object>(value: T): Partial<T> {
   return result;
 }
 ```
+
+The four Effect rules follow Effect's own guidance (the `AGENTS.md` shipped in the `effect` package, and the v4 docs):
+
+- `Effect.fn("name")` creates a tracing span, so it needs a name, and the name should match the function: `const query = Effect.fn("query")` or `Effect.fn("Database.query")`. Use `Effect.fnUntraced` for functions that shouldn't create a span. Pass combinators as extra arguments instead of piping: `Effect.fn("f")(function* () { … }, Effect.catch(…))`.
+- Run effects once at the program's edge: `NodeRuntime.runMain` / `BunRuntime.runMain` in entrypoints, `ManagedRuntime` in framework adapters, `it.effect` from `@effect/vitest` in tests. Turn the rule off for adapter files with an override.
+- Recover from specific errors with `catchTag`, log before recovering, or make discarding explicit with `Effect.ignore`.
+- Bound retries with `Schedule.recurs`, `Schedule.during` or `Schedule.upTo`, or pass `{ schedule, times }`. `Effect.repeat` forever is allowed; that's a normal daemon loop.
 
 `workspaceScopes` lists package-scope prefixes, such as `['@acme/']`. Subpaths under those scopes are checked like local files; other scoped packages count as external.
 
