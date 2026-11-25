@@ -1,0 +1,72 @@
+{
+  "name": "@sandrinodm/oxlint-config",
+  "version": "0.1.0",
+  "description": "Strict Oxlint and Oxfmt preset for Vite+: the Cloudflare rules, type-aware checks and custom slop/* rules against low-evidence TypeScript.",
+  "keywords": [
+    "effect",
+    "lint",
+    "oxfmt",
+    "oxlint",
+    "oxlint-config",
+    "typescript",
+    "vite-plus"
+  ],
+  "homepage": "https://github.com/sandrinodm/oxlint-config#readme",
+  "bugs": "https://github.com/sandrinodm/oxlint-config/issues",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sandrinodm/oxlint-config.git"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "default": "./dist/plugin.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "check": "vp check",
+    "lint:fix": "vp check --fix",
+    "prepack": "vp pack",
+    "prepare": "vp config",
+    "ready": "pnpm check && vp test",
+    "test": "vp test",
+    "test:package": "node scripts/package-smoke.mjs"
+  },
+  "dependencies": {
+    "@cloudflare/oxlint-config": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "peerDependencies": {
+    "vite-plus": ">=1.7.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.16.1",
+      "onFail": "download"
+    }
+  },
+  "engines": {
+    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
+  }
+}

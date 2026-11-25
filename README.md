@@ -1,0 +1,120 @@
+# @sandrinodm/oxlint-config
+
+[![npm](https://img.shields.io/npm/v/@sandrinodm/oxlint-config)](https://www.npmjs.com/package/@sandrinodm/oxlint-config)
+[![CI](https://github.com/sandrinodm/oxlint-config/actions/workflows/ci.yml/badge.svg)](https://github.com/sandrinodm/oxlint-config/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/@sandrinodm/oxlint-config)](./LICENSE)
+
+A strict Oxlint and Oxfmt preset for [Vite+](https://viteplus.dev). It is aimed at TypeScript and Effect codebases where a lot of the code is written by AI agents.
+
+The preset:
+
+- extends [`@cloudflare/oxlint-config`](https://github.com/cloudflare/oxlint-config)
+- turns the `correctness`, `suspicious` and `perf` categories on as errors
+- enables type-aware linting with `typeCheck`
+- adds twelve `slop/*` rules for patterns built-in rules don't catch: chained type assertions, raw `JSON.parse`, `throw` inside `Effect.gen`, comments about plans and tickets, missing JSDoc, and more
+
+## Install
+
+```sh
+pnpm add -D @sandrinodm/oxlint-config
+```
+
+Requires `vite-plus` 1.7.0 or later. Node.js 22.18+, 24.11+ or 26+, the same range as Vite+.
+
+## Use
+
+Spread the presets into the root `vite.config.ts`:
+
+```ts
+import oxlintConfig, { fmtConfig } from '@sandrinodm/oxlint-config';
+import { defineConfig } from 'vite-plus';
+
+export default defineConfig({
+  fmt: fmtConfig,
+  lint: oxlintConfig,
+});
+```
+
+Run `vp lint`, `vp fmt` or `vp check` locally and in CI.
+
+Spread the preset into `lint` rather than listing it under `extends`, so `options` (`typeAware`, `typeCheck`) and `ignorePatterns` carry over too.
+
+### Extend it
+
+The preset knows nothing about your repository. Paths, package boundaries and workspace scopes belong in your own config:
+
+```ts
+import oxlintConfig, { fmtConfig, restrictedImportsOverride } from '@sandrinodm/oxlint-config';
+import { defineConfig } from 'vite-plus';
+
+export default defineConfig({
+  fmt: {
+    ...fmtConfig,
+    ignorePatterns: [...fmtConfig.ignorePatterns, 'docs/**'],
+    sortImports: {
+      ...fmtConfig.sortImports,
+      internalPattern: ['@acme/*', ...fmtConfig.sortImports.internalPattern],
+    },
+  },
+  lint: {
+    ...oxlintConfig,
+    rules: {
+      ...oxlintConfig.rules,
+      'slop/kebab-case-imports': ['error', { workspaceScopes: ['@acme/'] }],
+      'slop/no-tests-directory': ['error', { workspaceScopes: ['@acme/'] }],
+    },
+    overrides: [
+      ...oxlintConfig.overrides,
+      restrictedImportsOverride(['packages/domain/src/**/*.ts'], [{ group: ['node:*', 'bun'] }]),
+    ],
+  },
+});
+```
+
+`restrictedImportsOverride(files, patterns)` adds import bans for some files and keeps the preset's base bans (`zod` and `../../../`). An override that sets `no-restricted-imports` by hand would replace them.
+
+## What the preset sets
+
+**Lint** (`default` export):
+
+- Cloudflare's rule set, plus the `typescript`, `unicorn`, `oxc`, `import` and `jsdoc` plugins.
+- Strict TypeScript rules: no `any`, the `no-unsafe-*` family, `no-non-null-assertion`, `no-floating-promises`, `switch-exhaustiveness-check`, and `consistent-type-imports` with separate `import type` statements.
+- Size limits: complexity 14, depth 4, 4 parameters, 350 lines per file, 100 lines per function.
+- Kebab-case file names, no barrel files, and no import cycles.
+- A `no-restricted-imports` rule banning Zod (use Effect Schema) and `../../../` imports.
+- In `*.test.*` and `*.spec.*` files: the vitest plugin, no size limits, and no fixed sleeps. Tests, stories, fixtures, `.d.ts` files and `vite.config.ts` don't need JSDoc.
+
+**Format** (`fmtConfig`):
+
+- Single quotes, semicolons, trailing commas, 100 columns, and multiline JSDoc.
+- Sorted `package.json` scripts.
+- Grouped imports: type imports first, then external, internal and relative.
+- Line wrapping in Markdown prose is kept as written.
+- Build output, `routeTree.gen.ts` and `bun.lock` are ignored.
+
+## Rules
+
+| Rule                              | Reports                                                   | Options                                  |
+| --------------------------------- | --------------------------------------------------------- | ---------------------------------------- |
+| `slop/no-chained-type-assertions` | `x as unknown as T`                                       |                                          |
+| `slop/no-disable-safety-rules`    | inline disables of type-safety and test-integrity rules   |                                          |
+| `slop/no-raw-json-parse`          | `JSON.parse` instead of Effect Schema decoding            |                                          |
+| `slop/no-fixed-sleep-in-tests`    | `setTimeout` / `Bun.sleep` in tests                       |                                          |
+| `slop/kebab-case-imports`         | non-kebab-case local import paths                         | `workspaceScopes`                        |
+| `slop/no-tests-directory`         | `__tests__` directories, and imports through them         | `workspaceScopes`                        |
+| `slop/blank-line-after-if`        | a missing blank line after a control block                |                                          |
+| `slop/no-throw-in-effect-gen`     | `throw` inside `Effect.gen` / `Effect.fn`                 |                                          |
+| `slop/no-console-in-effect-gen`   | `console.*` inside Effect generators                      |                                          |
+| `slop/no-banner-comments`         | divider and `#region` comments                            |                                          |
+| `slop/no-history-comments`        | comments about plans, tickets or past changes             |                                          |
+| `slop/require-jsdoc`              | missing multiline JSDoc on declarations, members, schemas | `require{Zod,EffectSchema,Drizzle}JsDoc` |
+
+`workspaceScopes` lists package-scope prefixes, such as `['@acme/']`. Subpaths under those scopes are checked like local files; other scoped packages count as external.
+
+## Credits
+
+The preset builds on [`@cloudflare/oxlint-config`](https://github.com/cloudflare/oxlint-config), which builds on [`@nkzw/oxlint-config`](https://github.com/nkzw-tech/oxlint-config). Several `slop/*` rules follow ideas from Dillon Mulroy's [anti-slop](https://github.com/dmmulroy/anti-slop) rules, reimplemented on `vite-plus/lint/plugins`.
+
+## License
+
+[MIT](./LICENSE)

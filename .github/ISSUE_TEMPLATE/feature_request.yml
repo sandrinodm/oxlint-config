@@ -1,0 +1,25 @@
+name: Rule or preset proposal
+description: Propose a new rule, a rule option, or a change to the preset.
+title: 'feat: '
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What pattern should be caught or allowed, and why does it matter?
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples
+      description: Code the rule should report, and similar code it should accept.
+      render: ts
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Existing alternatives
+      description: Built-in Oxlint rules or other plugins you considered.

@@ -1,0 +1,45 @@
+name: Bug report
+description: A rule reports valid code, misses invalid code, crashes, or the preset fails to load.
+title: 'bug: '
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: '@sandrinodm/oxlint-config version'
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: vite-plus
+    attributes:
+      label: vite-plus version
+      placeholder: 1.7.0
+    validations:
+      required: true
+  - type: input
+    id: rule
+    attributes:
+      label: Rule
+      description: The rule id from the diagnostic, such as `slop/blank-line-after-if`.
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: The smallest code sample and `vite.config.ts` lint settings that show the problem.
+      render: ts
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the `vp lint` output.
+    validations:
+      required: true
