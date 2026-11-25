@@ -4,6 +4,7 @@
   "description": "Strict Oxlint and Oxfmt preset for Vite+: the Cloudflare rules, type-aware checks and custom slop/* rules against low-evidence TypeScript.",
   "keywords": [
     "effect",
+    "effect-ts",
     "lint",
     "oxfmt",
     "oxlint",
@@ -29,6 +30,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./effect": {
+      "types": "./dist/effect.d.ts",
+      "default": "./dist/effect.js"
+    },
     "./plugin": {
       "types": "./dist/plugin.d.ts",
       "default": "./dist/plugin.js"
@@ -52,12 +57,20 @@
     "@cloudflare/oxlint-config": "catalog:"
   },
   "devDependencies": {
+    "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
+    "effect": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
   },
   "peerDependencies": {
+    "@effect/tsgo": "^0.73.4",
     "vite-plus": ">=1.7.0"
+  },
+  "peerDependenciesMeta": {
+    "@effect/tsgo": {
+      "optional": true
+    }
   },
   "devEngines": {
     "packageManager": {

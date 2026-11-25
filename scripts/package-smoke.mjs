@@ -65,6 +65,8 @@ execFileSync(
     `vite-plus@${installedVersion('vite-plus')}`,
     `typescript@${installedVersion('typescript')}`,
     `@types/node@${installedVersion('@types/node')}`,
+    `effect@${installedVersion('effect')}`,
+    `@effect/tsgo@${installedVersion('@effect/tsgo')}`,
   ],
   { cwd: consumer, stdio: 'inherit', timeout: INSTALL_TIMEOUT_MS },
 );
@@ -254,6 +256,60 @@ assert.doesNotMatch(
   output,
   /@nkzw\(no-instanceof\)/,
   `The upstream no-instanceof rule is still on:\n${output}`,
+);
+
+// The `effect` export: Effect's type-aware rules through the `effect-tsgo` wrapper.
+writeFileSync(
+  join(consumer, 'vite.config.ts'),
+  `import effectConfig from '${sourceManifest.name}/effect';
+import { defineConfig } from 'vite-plus';
+
+export default defineConfig({ lint: effectConfig });
+`,
+);
+
+writeFileSync(
+  join(consumer, 'src', 'sample.ts'),
+  `import { Effect, Schedule } from 'effect';
+
+/**
+ * Program with a dropped log effect, which \`effecttsgo/floating-effect\` must report.
+ */
+export const program = Effect.gen(function* () {
+  Effect.log('dropped');
+  return 1;
+});
+
+/**
+ * Retries forever, which \`slop/no-unbounded-retry\` must report.
+ */
+export const retried = program.pipe(Effect.retry(Schedule.forever));
+`,
+);
+
+/**
+ * The consumer's `effect-tsgo vp lint` run over the Effect fixture, which is expected to fail.
+ */
+const effectLint = spawnSync(
+  join(consumer, 'node_modules/.bin/effect-tsgo'),
+  ['vp', 'lint', 'src'],
+  options,
+);
+
+/**
+ * Combined output of the Effect lint run.
+ */
+const effectOutput = `${effectLint.stdout}${effectLint.stderr}`;
+assert.notEqual(effectLint.status, 0, 'The Effect fixture must fail lint');
+assert.match(
+  effectOutput,
+  /effecttsgo\(floating-effect\)/,
+  `Effect's type-aware rules did not run:\n${effectOutput}`,
+);
+assert.match(
+  effectOutput,
+  /slop\(no-unbounded-retry\)/,
+  `The slop rules are missing from the effect export:\n${effectOutput}`,
 );
 
 console.log(`Package smoke test passed for ${manifest.name}@${manifest.version}.`);

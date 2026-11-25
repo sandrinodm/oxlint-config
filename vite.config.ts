@@ -9,7 +9,7 @@ const ignoredPatterns = ['coverage/**', '*.tgz', 'pnpm-lock.yaml'];
 
 export default defineConfig({
   pack: {
-    entry: ['src/index.ts', 'src/plugin.ts'],
+    entry: ['src/index.ts', 'src/plugin.ts', 'src/effect.ts'],
     platform: 'node',
     format: ['esm'],
     dts: true,
