@@ -42,6 +42,10 @@ export default {
     reportUnusedDisableDirectives: 'error',
   },
   rules: {
+    // Replaced by `slop/no-instanceof`: the upstream rule bans built-ins such as `Date` and
+    // `HTMLElement` but exempts any bare identifier ending in `Error` or `Exception`, which lets
+    // Effect tagged errors such as `HttpRequestError` through.
+    '@nkzw/no-instanceof': 'off',
     // Under `exactOptionalPropertyTypes`, `...(x === undefined ? {} : { x })` is the idiomatic way
     // to omit an optional key; building the object statement by statement forces mutable copies.
     'quality/no-conditional-empty-object-spread': 'off',
@@ -104,6 +108,7 @@ export default {
       { max: 100, skipBlankLines: true, skipComments: true },
     ],
     'slop/no-chained-type-assertions': 'error',
+    'slop/no-instanceof': 'error',
     'slop/no-disable-safety-rules': 'error',
     'slop/no-raw-json-parse': 'error',
     'slop/kebab-case-imports': 'error',

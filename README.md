@@ -11,7 +11,7 @@ The preset:
 - extends [`@cloudflare/oxlint-config`](https://github.com/cloudflare/oxlint-config)
 - turns the `correctness`, `suspicious` and `perf` categories on as errors
 - enables type-aware linting with `typeCheck`
-- adds twelve `slop/*` rules for patterns built-in rules don't catch: chained type assertions, raw `JSON.parse`, `throw` inside `Effect.gen`, comments about plans and tickets, missing JSDoc, and more
+- adds thirteen `slop/*` rules for patterns built-in rules don't catch: chained type assertions, raw `JSON.parse`, `throw` inside `Effect.gen`, comments about plans and tickets, missing JSDoc, and more
 
 ## Install
 
@@ -94,20 +94,29 @@ export default defineConfig({
 
 ## Rules
 
-| Rule                              | Reports                                                   | Options                                  |
-| --------------------------------- | --------------------------------------------------------- | ---------------------------------------- |
-| `slop/no-chained-type-assertions` | `x as unknown as T`                                       |                                          |
-| `slop/no-disable-safety-rules`    | inline disables of type-safety and test-integrity rules   |                                          |
-| `slop/no-raw-json-parse`          | `JSON.parse` instead of Effect Schema decoding            |                                          |
-| `slop/no-fixed-sleep-in-tests`    | `setTimeout` / `Bun.sleep` in tests                       |                                          |
-| `slop/kebab-case-imports`         | non-kebab-case local import paths                         | `workspaceScopes`                        |
-| `slop/no-tests-directory`         | `__tests__` directories, and imports through them         | `workspaceScopes`                        |
-| `slop/blank-line-after-if`        | a missing blank line after a control block                |                                          |
-| `slop/no-throw-in-effect-gen`     | `throw` inside `Effect.gen` / `Effect.fn`                 |                                          |
-| `slop/no-console-in-effect-gen`   | `console.*` inside Effect generators                      |                                          |
-| `slop/no-banner-comments`         | divider and `#region` comments                            |                                          |
-| `slop/no-history-comments`        | comments about plans, tickets or past changes             |                                          |
-| `slop/require-jsdoc`              | missing multiline JSDoc on declarations, members, schemas | `require{Zod,EffectSchema,Drizzle}JsDoc` |
+| Rule                              | Reports                                                               | Options                                  |
+| --------------------------------- | --------------------------------------------------------------------- | ---------------------------------------- |
+| `slop/no-chained-type-assertions` | `x as unknown as T`                                                   |                                          |
+| `slop/no-disable-safety-rules`    | inline disables of type-safety and test-integrity rules               |                                          |
+| `slop/no-raw-json-parse`          | `JSON.parse` instead of Effect Schema decoding                        |                                          |
+| `slop/no-instanceof`              | `instanceof` against package or app classes (allows global built-ins) | `allow`                                  |
+| `slop/no-fixed-sleep-in-tests`    | `setTimeout` / `Bun.sleep` in tests                                   |                                          |
+| `slop/kebab-case-imports`         | non-kebab-case local import paths                                     | `workspaceScopes`                        |
+| `slop/no-tests-directory`         | `__tests__` directories, and imports through them                     | `workspaceScopes`                        |
+| `slop/blank-line-after-if`        | a missing blank line after a control block                            |                                          |
+| `slop/no-throw-in-effect-gen`     | `throw` inside `Effect.gen` / `Effect.fn`                             |                                          |
+| `slop/no-console-in-effect-gen`   | `console.*` inside Effect generators                                  |                                          |
+| `slop/no-banner-comments`         | divider and `#region` comments                                        |                                          |
+| `slop/no-history-comments`        | comments about plans, tickets or past changes                         |                                          |
+| `slop/require-jsdoc`              | missing multiline JSDoc on declarations, members, schemas             | `require{Zod,EffectSchema,Drizzle}JsDoc` |
+
+`slop/no-instanceof` replaces Cloudflare's `@nkzw/no-instanceof`. That rule bans built-ins such as `Date` and `HTMLElement`, but exempts any bare identifier ending in `Error` or `Exception`, so `instanceof HttpRequestError` passes. This rule turns that around:
+
+- Runtime classes are allowed: errors, `Date`, `Map`, `Uint8Array`, `URL`, `Response`, DOM elements and events, and members of `Intl`, `WebAssembly` and `Temporal`. That covers spellings like `globalThis.Date`, `globalThis['Date']` and `(Date as DateConstructor)`.
+- A built-in name only counts when nothing in the file declares or imports it. `import { Response } from 'undici'` or a local `class Node` is reported.
+- Classes from packages or your code are reported, for example Effect tagged errors or a `class OrderPlacedEvent`. For values your own code produced, narrow them with `Schema.is(HttpRequestError)(error)` or `Predicate.isTagged(error, 'HttpRequestError')`. Both are structural checks that a plain object can satisfy, so decode untrusted input with `Schema.decodeUnknown` instead.
+- `allow` exempts exact dotted paths, such as `'LegacyError'` or `'CircuitBreaker.CircuitBreakerError'`.
+- Runtime classes are still bound to one realm (a `vm` context, an iframe, jsdom). Where that matters, use `Error.isError` or `ArrayBuffer.isView`.
 
 The preset also turns off `quality/no-conditional-empty-object-spread`. Under `exactOptionalPropertyTypes`, `...(x === undefined ? {} : { x })` is the idiomatic way to leave out an optional key.
 

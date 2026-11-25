@@ -8,6 +8,7 @@ import { noConsoleInEffectGen } from './rules/no-console-in-effect-gen.ts';
 import { noDisableSafetyRules } from './rules/no-disable-safety-rules.ts';
 import { noFixedSleepInTests } from './rules/no-fixed-sleep-in-tests.ts';
 import { noHistoryComments } from './rules/no-history-comments.ts';
+import { noInstanceof } from './rules/no-instanceof.ts';
 import { noRawJsonParse } from './rules/no-raw-json-parse.ts';
 import { noTestsDirectory } from './rules/no-tests-directory.ts';
 import { noThrowInEffectGen } from './rules/no-throw-in-effect-gen.ts';
@@ -23,6 +24,7 @@ export default definePlugin({
     'no-chained-type-assertions': noChainedTypeAssertions,
     'no-disable-safety-rules': noDisableSafetyRules,
     'no-raw-json-parse': noRawJsonParse,
+    'no-instanceof': noInstanceof,
     'no-fixed-sleep-in-tests': noFixedSleepInTests,
     'kebab-case-imports': kebabCaseImports,
     'no-tests-directory': noTestsDirectory,

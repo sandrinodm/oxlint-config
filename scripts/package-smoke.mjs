@@ -161,6 +161,21 @@ export const parsed: unknown = JSON.parse('{}');
  * Deliberate type error.
  */
 export const count: number = 'one';
+
+/**
+ * App class checked with \`instanceof\`, which \`slop/no-instanceof\` must report.
+ */
+export class OrderPlacedEvent {}
+
+/**
+ * App class identity check.
+ */
+export const isOrder = (value: unknown): boolean => value instanceof OrderPlacedEvent;
+
+/**
+ * Built-in identity check, which neither instanceof rule may report.
+ */
+export const isDate = (value: unknown): boolean => value instanceof Date;
 `,
 );
 
@@ -217,5 +232,16 @@ const output = `${lint.stdout}${lint.stderr}`;
 assert.notEqual(lint.status, 0, 'The fixture must fail lint');
 assert.match(output, /slop\(no-raw-json-parse\)/, `The slop plugin did not load:\n${output}`);
 assert.match(output, /TS2322/, `Type-aware checking did not run:\n${output}`);
+assert.match(
+  output,
+  /slop\(no-instanceof\)[^\n]*OrderPlacedEvent/,
+  `The preset does not enable slop/no-instanceof:\n${output}`,
+);
+assert.doesNotMatch(output, /instanceof`? ?Date/, `A built-in instanceof was reported:\n${output}`);
+assert.doesNotMatch(
+  output,
+  /@nkzw\(no-instanceof\)/,
+  `The upstream no-instanceof rule is still on:\n${output}`,
+);
 
 console.log(`Package smoke test passed for ${manifest.name}@${manifest.version}.`);
