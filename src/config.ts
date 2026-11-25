@@ -42,6 +42,9 @@ export default {
     reportUnusedDisableDirectives: 'error',
   },
   rules: {
+    // Under `exactOptionalPropertyTypes`, `...(x === undefined ? {} : { x })` is the idiomatic way
+    // to omit an optional key; building the object statement by statement forces mutable copies.
+    'quality/no-conditional-empty-object-spread': 'off',
     'typescript/no-explicit-any': 'error',
     'typescript/no-unsafe-assignment': 'error',
     'typescript/no-unsafe-call': 'error',

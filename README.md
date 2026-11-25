@@ -109,6 +109,8 @@ export default defineConfig({
 | `slop/no-history-comments`        | comments about plans, tickets or past changes             |                                          |
 | `slop/require-jsdoc`              | missing multiline JSDoc on declarations, members, schemas | `require{Zod,EffectSchema,Drizzle}JsDoc` |
 
+The preset also turns off `quality/no-conditional-empty-object-spread`. Under `exactOptionalPropertyTypes`, `...(x === undefined ? {} : { x })` is the idiomatic way to leave out an optional key.
+
 `workspaceScopes` lists package-scope prefixes, such as `['@acme/']`. Subpaths under those scopes are checked like local files; other scoped packages count as external.
 
 ## Credits
