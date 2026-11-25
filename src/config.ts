@@ -46,8 +46,8 @@ export default {
     // `HTMLElement` but exempts any bare identifier ending in `Error` or `Exception`, which lets
     // Effect tagged errors such as `HttpRequestError` through.
     '@nkzw/no-instanceof': 'off',
-    // Under `exactOptionalPropertyTypes`, `...(x === undefined ? {} : { x })` is the idiomatic way
-    // to omit an optional key; building the object statement by statement forces mutable copies.
+    // Replaced by `slop/no-conditional-spread`, which also reports the `cond && { key }` form the
+    // upstream rule misses, and leaves `cond ? existingObject : {}` fallbacks alone.
     'quality/no-conditional-empty-object-spread': 'off',
     'typescript/no-explicit-any': 'error',
     'typescript/no-unsafe-assignment': 'error',
@@ -109,6 +109,7 @@ export default {
     ],
     'slop/no-chained-type-assertions': 'error',
     'slop/no-instanceof': 'error',
+    'slop/no-conditional-spread': 'error',
     'slop/no-disable-safety-rules': 'error',
     'slop/no-raw-json-parse': 'error',
     'slop/kebab-case-imports': 'error',

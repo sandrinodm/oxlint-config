@@ -11,7 +11,7 @@ The preset:
 - extends [`@cloudflare/oxlint-config`](https://github.com/cloudflare/oxlint-config)
 - turns the `correctness`, `suspicious` and `perf` categories on as errors
 - enables type-aware linting with `typeCheck`
-- adds thirteen `slop/*` rules for patterns built-in rules don't catch: chained type assertions, raw `JSON.parse`, `throw` inside `Effect.gen`, comments about plans and tickets, missing JSDoc, and more
+- adds fourteen `slop/*` rules for patterns built-in rules don't catch: chained type assertions, raw `JSON.parse`, `throw` inside `Effect.gen`, comments about plans and tickets, missing JSDoc, and more
 
 ## Install
 
@@ -100,6 +100,7 @@ export default defineConfig({
 | `slop/no-disable-safety-rules`    | inline disables of type-safety and test-integrity rules               |                                          |
 | `slop/no-raw-json-parse`          | `JSON.parse` instead of Effect Schema decoding                        |                                          |
 | `slop/no-instanceof`              | `instanceof` against package or app classes (allows global built-ins) | `allow`                                  |
+| `slop/no-conditional-spread`      | spreads that add or omit keys based on a condition (`? : {}`, `&&`)   |                                          |
 | `slop/no-fixed-sleep-in-tests`    | `setTimeout` / `Bun.sleep` in tests                                   |                                          |
 | `slop/kebab-case-imports`         | non-kebab-case local import paths                                     | `workspaceScopes`                        |
 | `slop/no-tests-directory`         | `__tests__` directories, and imports through them                     | `workspaceScopes`                        |
@@ -118,7 +119,42 @@ export default defineConfig({
 - `allow` exempts exact dotted paths, such as `'LegacyError'` or `'CircuitBreaker.CircuitBreakerError'`.
 - Runtime classes are still bound to one realm (a `vm` context, an iframe, jsdom). Where that matters, use `Error.isError` or `ArrayBuffer.isView`.
 
-The preset also turns off `quality/no-conditional-empty-object-spread`. Under `exactOptionalPropertyTypes`, `...(x === undefined ? {} : { x })` is the idiomatic way to leave out an optional key.
+`slop/no-conditional-spread` replaces Cloudflare's `quality/no-conditional-empty-object-spread`. Both report spreads that add or leave out keys depending on a condition. The upstream rule only catches `...(x ? { x } : {})`; this one also catches `...(x && { x })` and `...(x ? { x } : undefined)`. Spreading an existing object with a fallback, such as `...(isRecord(value) ? value : {})` or `...(options ?? {})`, is not reported.
+
+List the keys in the object literal instead, and drop `undefined` values with a small helper:
+
+```ts
+// before
+const query = {
+  ...(params.limit !== undefined ? { limit: params.limit } : {}),
+  ...(params.cursor !== undefined && { cursor: params.cursor }),
+};
+
+// after: `omitUndefined` returns a copy without the keys whose value is `undefined`
+const query = omitUndefined({ limit: params.limit, cursor: params.cursor });
+```
+
+The preset doesn't ship `omitUndefined`, because a lint config shouldn't be a runtime dependency. A version that type-checks under `exactOptionalPropertyTypes` without casts:
+
+```ts
+export type OmitUndefined<T> = {
+  readonly [K in keyof T as undefined extends T[K] ? never : K]: T[K];
+} & {
+  readonly [K in keyof T as undefined extends T[K] ? K : never]?: Exclude<T[K], undefined>;
+};
+
+export function omitUndefined<T extends object>(value: T): OmitUndefined<T>;
+export function omitUndefined<T extends object>(value: T): Partial<T> {
+  const result: Partial<T> = {};
+  for (const key in value) {
+    if (Object.hasOwn(value, key) && value[key] !== undefined) {
+      result[key] = value[key];
+    }
+  }
+
+  return result;
+}
+```
 
 `workspaceScopes` lists package-scope prefixes, such as `['@acme/']`. Subpaths under those scopes are checked like local files; other scoped packages count as external.
 

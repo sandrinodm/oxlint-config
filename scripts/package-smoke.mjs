@@ -173,6 +173,13 @@ export class OrderPlacedEvent {}
 export const isOrder = (value: unknown): boolean => value instanceof OrderPlacedEvent;
 
 /**
+ * Conditional key spread, which \`slop/no-conditional-spread\` must report.
+ */
+export const withLimit = (limit: number | undefined): { readonly limit?: number } => ({
+  ...(limit !== undefined && { limit }),
+});
+
+/**
  * Built-in identity check, which neither instanceof rule may report.
  */
 export const isDate = (value: unknown): boolean => value instanceof Date;
@@ -236,6 +243,11 @@ assert.match(
   output,
   /slop\(no-instanceof\)[^\n]*OrderPlacedEvent/,
   `The preset does not enable slop/no-instanceof:\n${output}`,
+);
+assert.match(
+  output,
+  /slop\(no-conditional-spread\)/,
+  `The preset does not enable slop/no-conditional-spread:\n${output}`,
 );
 assert.doesNotMatch(output, /instanceof`? ?Date/, `A built-in instanceof was reported:\n${output}`);
 assert.doesNotMatch(

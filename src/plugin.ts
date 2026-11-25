@@ -4,6 +4,7 @@ import { blankLineAfterIf } from './rules/blank-line-after-if.ts';
 import { kebabCaseImports } from './rules/kebab-case-imports.ts';
 import { noBannerComments } from './rules/no-banner-comments.ts';
 import { noChainedTypeAssertions } from './rules/no-chained-type-assertions.ts';
+import { noConditionalSpread } from './rules/no-conditional-spread.ts';
 import { noConsoleInEffectGen } from './rules/no-console-in-effect-gen.ts';
 import { noDisableSafetyRules } from './rules/no-disable-safety-rules.ts';
 import { noFixedSleepInTests } from './rules/no-fixed-sleep-in-tests.ts';
@@ -25,6 +26,7 @@ export default definePlugin({
     'no-disable-safety-rules': noDisableSafetyRules,
     'no-raw-json-parse': noRawJsonParse,
     'no-instanceof': noInstanceof,
+    'no-conditional-spread': noConditionalSpread,
     'no-fixed-sleep-in-tests': noFixedSleepInTests,
     'kebab-case-imports': kebabCaseImports,
     'no-tests-directory': noTestsDirectory,
