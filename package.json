@@ -1,6 +1,6 @@
 {
   "name": "@yieldkit/oxlint-config",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Strict Oxlint and Oxfmt preset for Vite+: the Cloudflare rules, type-aware checks and custom slop/* rules against low-evidence TypeScript.",
   "keywords": [
     "effect",
