@@ -33,6 +33,12 @@ export const readWorkspaceScopes = (options: ReadonlyArray<unknown>): ReadonlyAr
 };
 
 /**
+ * Finds the query or fragment delimiter in an import specifier, skipping the leading alias hash.
+ * Returns no match when the specifier has no suffix.
+ */
+export const IMPORT_SUFFIX_RE = /\?|(?<!^)#/;
+
+/**
  * Returns the first path-segment index subject to local filename validation: `0` for relative/root
  * paths (`./`, `../`, `/`), `1` for alias prefixes (`~/`, `@/`, `#/`), `2` for
  * `<workspace-scope><pkg>/<subpath>` subpaths, or `null` for external dependencies and bare

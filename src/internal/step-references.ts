@@ -273,7 +273,7 @@ const readChildValue = (node: ESTree.Node, key: string): VisitorChild =>
 
 /**
  * Depth-first search for the first identifier in `node` that reads one of `names`, in source order.
- * Does not descend into functions or type-only nodes.
+ * Does not descend into functions, meta properties, or type-only nodes.
  */
 const findFirstReference = (
   node: ESTree.Node,
@@ -285,7 +285,11 @@ const findFirstReference = (
     return !isNonReferenceIdentifier(node, parent) && names.has(node.name) ? node.name : null;
   }
 
-  if (FUNCTION_LIKE_TYPES.has(node.type) || SKIPPED_TS_TYPES.has(node.type)) {
+  if (
+    node.type === 'MetaProperty' ||
+    FUNCTION_LIKE_TYPES.has(node.type) ||
+    SKIPPED_TS_TYPES.has(node.type)
+  ) {
     return null;
   }
 

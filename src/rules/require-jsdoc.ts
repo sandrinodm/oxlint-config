@@ -57,6 +57,60 @@ const getLeadingJsDocComments = (
     .filter((comment) => isStandaloneJsDocComment(sourceCode, comment));
 
 /**
+ * Checks whether the preceding declaration is a signature for the same function or method.
+ */
+const isOverloadSignature = (
+  sourceCode: SourceCode,
+  node: ESTree.Node,
+  sibling: ESTree.Node,
+): boolean => {
+  if (node.type === 'ExportNamedDeclaration' && sibling.type === 'ExportNamedDeclaration') {
+    return (
+      node.declaration !== null &&
+      sibling.declaration !== null &&
+      isOverloadSignature(sourceCode, node.declaration, sibling.declaration)
+    );
+  }
+
+  if (node.type === 'MethodDefinition' && sibling.type === 'MethodDefinition') {
+    return (
+      sibling.value.body === null &&
+      sibling.static === node.static &&
+      sourceCode.getText(sibling.key) === sourceCode.getText(node.key)
+    );
+  }
+
+  return (
+    node.type === 'FunctionDeclaration' &&
+    sibling.type === 'TSDeclareFunction' &&
+    sibling.id?.name === node.id?.name
+  );
+};
+
+/**
+ * Finds the first adjacent signature for the same overload group, or returns the node itself.
+ */
+const getOverloadJsDocTarget = (sourceCode: SourceCode, node: ESTree.Node): ESTree.Node => {
+  const parent = node.parent;
+  if (parent === null || !('body' in parent) || !Array.isArray(parent.body)) {
+    return node;
+  }
+
+  const siblings: ReadonlyArray<ESTree.Node> = parent.body;
+  let target: ESTree.Node = node;
+  for (let index = siblings.indexOf(node) - 1; index >= 0; index -= 1) {
+    const sibling = siblings[index];
+    if (sibling === undefined || !isOverloadSignature(sourceCode, node, sibling)) {
+      break;
+    }
+
+    target = sibling;
+  }
+
+  return target;
+};
+
+/**
  * Checks whether a comment spans more than one source line.
  */
 const isMultilineComment = (comment: ESTree.Comment): boolean =>
@@ -172,7 +226,24 @@ const inspectDeclaration = (
     return;
   }
 
-  const jsDocComments = getLeadingJsDocComments(sourceCode, candidate.jsDocTarget);
+  let jsDocComments = getLeadingJsDocComments(sourceCode, candidate.jsDocTarget);
+  if (jsDocComments.length === 0 && node.type === 'ClassDeclaration') {
+    const decorator = node.decorators.at(0);
+    if (decorator !== undefined && decorator.range[0] < candidate.jsDocTarget.range[0]) {
+      jsDocComments = getLeadingJsDocComments(sourceCode, decorator);
+    }
+  }
+
+  if (
+    jsDocComments.length === 0 &&
+    (node.type === 'FunctionDeclaration' || node.type === 'MethodDefinition')
+  ) {
+    jsDocComments = getLeadingJsDocComments(
+      sourceCode,
+      getOverloadJsDocTarget(sourceCode, candidate.jsDocTarget),
+    );
+  }
+
   if (jsDocComments.length === 0) {
     context.report({
       node: candidate.reportTarget,

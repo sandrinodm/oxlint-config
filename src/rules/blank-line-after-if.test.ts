@@ -16,6 +16,45 @@ const ruleTester = new RuleTester({
 
 ruleTester.run('blank-line-after-if', blankLineAfterIf, {
   valid: [
+    {
+      name: 'allows a blank line before a service constructor that assembles its methods',
+      code: `const make = Effect.gen(function* () {
+  const one = Effect.fn('one')(function* (id: string) {
+    return id;
+  });
+  const two = Effect.fn('two')(function* (id: string) {
+    return id;
+  });
+
+  return Repo.of({ one, two });
+});`,
+    },
+    {
+      name: 'allows a blank line before a returned object of shorthand properties',
+      code: `function make() {
+  const find = () => 1;
+
+  return { find };
+}`,
+    },
+    {
+      name: 'keeps the blank line before import.meta when a local is named meta',
+      code: `export function f() {
+  const meta = 1;
+
+  const url = import.meta.url;
+  return [meta, url];
+}`,
+    },
+    {
+      name: 'keeps the blank line before new.target when a local is named target',
+      code: `export function F() {
+  const target = 1;
+
+  const t = new.target;
+  return [t, target];
+}`,
+    },
     // Already has blank lines after conditions and groups consecutive diffMs checks
     `export const formatRelativeUtc = (
   isoTimestamp: string,
@@ -182,6 +221,33 @@ export const run = (): number => 1;`,
 };`,
   ],
   invalid: [
+    {
+      name: 'reports a blank line before a returned object that computes from the binding',
+      code: `function make() {
+  const total = 1;
+
+  return { total: total + 1 };
+}`,
+      output: `function make() {
+  const total = 1;
+  return { total: total + 1 };
+}`,
+      errors: [{ messageId: 'splitStep' }],
+    },
+    {
+      name: 'moves a trailing next-line directive with its statement',
+      code: `function run() {
+  if (ready) {} // oxlint-disable-next-line no-console
+  console.log('x');
+}`,
+      output: `function run() {
+  if (ready) {}
+
+  // oxlint-disable-next-line no-console
+  console.log('x');
+}`,
+      errors: [{ messageId: 'expectedBlankLine' }],
+    },
     // Example 1 from specification: formatRelativeUtc
     {
       code: `export const formatRelativeUtc = (

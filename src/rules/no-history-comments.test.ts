@@ -16,6 +16,21 @@ const ruleTester = new RuleTester({
 
 ruleTester.run('no-history-comments', noHistoryComments, {
   valid: [
+    {
+      name: 'allows a length limit expressed with no longer than',
+      code: `// Postgres identifiers can be no longer than 63 bytes.
+export const MAX_BYTES = 63;`,
+    },
+    {
+      name: 'allows a description of Date.now',
+      code: `// Date.now returns milliseconds since the epoch.
+export const epoch = 0;`,
+    },
+    {
+      name: 'allows SHA3, CRC, and FIPS standard names',
+      code: `// Hashes with SHA3-256, checksums with CRC-32, and follows FIPS-140.
+export const algo = 'sha3-256';`,
+    },
     `// Encodes payloads as UTF-8 and timestamps as ISO-8601.
 export const ENCODING = 'utf-8';`,
     `// Computes SHA-256 digests per RFC-7231 and IEEE-754 rules.
@@ -28,6 +43,24 @@ export const x = 1;`,
 export const format = 'YYYY-MM-DD';`,
   ],
   invalid: [
+    {
+      name: 'reports planning prose that mentions oxlint',
+      code: `// Phase 2 changes the oxlint preset.
+export {};`,
+      errors: [{ messageId: 'history' }],
+    },
+    {
+      name: 'reports history prose that mentions eslint',
+      code: `// We no longer run eslint here, see PROJ-123.
+export const x = 1;`,
+      errors: [{ messageId: 'history' }],
+    },
+    {
+      name: 'reports planning prose that mentions a deprecation tag',
+      code: `// Phase 2 replaces the @deprecated helper.
+export const x = 1;`,
+      errors: [{ messageId: 'history' }],
+    },
     {
       code: `// Phase 2 adds comment tree ingestion.
 export const sync = (): void => undefined;`,

@@ -1,6 +1,7 @@
 import { defineRule } from 'vite-plus/lint/plugins';
 
 import {
+  IMPORT_SUFFIX_RE,
   WORKSPACE_SCOPES_SCHEMA,
   createImportSpecifierVisitor,
   getCheckedStartIndex,
@@ -35,7 +36,7 @@ const findDisallowedTestDirInSpecifier = (
   rawSpecifier: string,
   workspaceScopes: ReadonlyArray<string>,
 ): string | null => {
-  const queryIndex = rawSpecifier.search(/[?#]/);
+  const queryIndex = rawSpecifier.search(IMPORT_SUFFIX_RE);
   const pathPart = queryIndex === -1 ? rawSpecifier : rawSpecifier.slice(0, queryIndex);
   const segments = pathPart.split('/');
   const startIndex = getCheckedStartIndex(pathPart, segments, workspaceScopes);

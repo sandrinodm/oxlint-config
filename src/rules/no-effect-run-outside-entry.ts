@@ -12,6 +12,12 @@ const RUN_FUNCTIONS: ReadonlySet<string> = new Set([
   'runSyncExit',
   'runFork',
   'runCallback',
+  'runPromiseWith',
+  'runPromiseExitWith',
+  'runSyncWith',
+  'runSyncExitWith',
+  'runForkWith',
+  'runCallbackWith',
 ]);
 
 /**

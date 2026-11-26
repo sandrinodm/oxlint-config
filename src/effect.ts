@@ -37,12 +37,17 @@ export default {
     ...Object.fromEntries([...EFFECT_RULE_NAMES].map((name) => [name, 'error' as const])),
     // Covered by `effecttsgo/global-console-in-effect`, which resolves `console` through types.
     'slop/no-console-in-effect-gen': 'off',
+    // Effect code relies on inferred `Effect<A, E, R>` types; hand-written return types repeat the
+    // error and requirement channels and go stale as they change. `effecttsgo/*` rules check those
+    // channels instead (`missing-effect-error`, `missing-effect-context`, `leaking-requirements`).
+    'typescript/explicit-module-boundary-types': 'off',
   },
   overrides: [
     ...base.overrides,
     {
       files: [
-        '**/*.{test,spec}.{ts,tsx,mts}',
+        '**/*.test.*',
+        '**/*.spec.*',
         '**/main.{ts,tsx,mts,js,mjs}',
         '**/bin/**',
         '**/scripts/**',

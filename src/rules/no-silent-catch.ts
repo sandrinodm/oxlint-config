@@ -7,15 +7,17 @@ import { getEffectMemberName } from '../internal/effect-imports.ts';
 /**
  * `Effect` operators that recover from every failure of a kind, where a constant handler throws the
  * failure away. Selective operators (`catchTag`, `catchTags`, `catchIf`, `catchReason`) are left
- * out: recovering from one named error with a fallback is deliberate.
+ * out: recovering from one named error with a fallback is deliberate. So are `orElseSucceed`,
+ * `ignore` and `option`, whose names already say the failure is replaced or dropped.
  */
 const CATCH_ALL_OPERATORS: ReadonlySet<string> = new Set([
   'catch',
-  'catchCause',
-  'catchDefect',
   'catchAll',
   'catchAllCause',
   'catchAllDefect',
+  'catchCause',
+  'catchDefect',
+  'catchEager',
 ]);
 
 /**
@@ -59,10 +61,19 @@ const isConstantValue = (node: ESTree.Node): boolean => {
   }
 
   if (node.type === 'ArrayExpression') {
-    return node.elements.length === 0;
+    return node.elements.every((element) => element === null || isConstantValue(element));
   }
 
-  return node.type === 'ObjectExpression' && node.properties.length === 0;
+  return (
+    node.type === 'ObjectExpression' &&
+    node.properties.every(
+      (property) =>
+        property.type === 'Property' &&
+        property.kind === 'init' &&
+        (!property.computed || isConstantValue(property.key)) &&
+        isConstantValue(property.value),
+    )
+  );
 };
 
 /**
@@ -92,14 +103,15 @@ const isSilentResult = (sourceCode: SourceCode, result: ESTree.Node): boolean =>
  * constant without looking at the failure, such as `Effect.catch(() => Effect.void)` or
  * `Effect.catchCause(() => Effect.succeed([]))`. The failure disappears without a log, metric or
  * typed fallback. Recover from specific errors with `catchTag`, log before recovering, or use
- * `Effect.ignore` to make discarding explicit. Provides no autofix.
+ * `Effect.orElseSucceed` / `Effect.ignore` to make the fallback or discard explicit. Provides no
+ * autofix.
  */
 export const noSilentCatch = defineRule({
   meta: {
     type: 'problem',
     messages: {
       silent:
-        '`Effect.{{name}}` with a constant handler discards every failure without a trace. Recover from specific errors with `catchTag`, log the failure before recovering, or use `Effect.ignore` if discarding is intended.',
+        '`Effect.{{name}}` with a constant handler discards every failure without a trace. Recover from specific errors with `catchTag`, log the failure before recovering, or make the intent explicit with `Effect.orElseSucceed` (fallback value) or `Effect.ignore` (discard).',
     },
   },
   create(context) {

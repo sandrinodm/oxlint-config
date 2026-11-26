@@ -23,6 +23,16 @@ const UNBOUNDED_SCHEDULES: ReadonlySet<string> = new Set([
 const BOUNDING_SCHEDULES: ReadonlySet<string> = new Set(['recurs', 'during', 'upTo', 'once']);
 
 /**
+ * Schedule combinators that can recur as long as one of their branches does.
+ */
+const BRANCHING_SCHEDULES: ReadonlySet<string> = new Set([
+  'min',
+  'union',
+  'concat',
+  'concatResult',
+]);
+
+/**
  * Retry option keys that stop retrying on their own.
  */
 const BOUNDING_OPTIONS: ReadonlySet<string> = new Set(['times', 'until', 'while']);
@@ -37,6 +47,20 @@ const collectScheduleMembers = (sourceCode: SourceCode, node: ESTree.Node): Set<
     const member = getEffectMemberName(sourceCode, current, 'Schedule');
     if (member !== null) {
       found.add(member);
+    }
+
+    if (
+      current.type === 'CallExpression' &&
+      BRANCHING_SCHEDULES.has(getEffectMemberName(sourceCode, current.callee, 'Schedule') ?? '')
+    ) {
+      const branches = current.arguments.flatMap((arg) =>
+        arg.type === 'ArrayExpression' ? arg.elements : [arg],
+      );
+      if (branches.some((branch) => branch !== null && isUnboundedPolicy(sourceCode, branch))) {
+        found.add('forever');
+      }
+
+      continue;
     }
 
     for (const key of sourceCode.visitorKeys[current.type] ?? []) {
@@ -68,7 +92,8 @@ const getPropertyName = (property: ESTree.Node): string | null => {
 /**
  * Returns `true` when a retry policy is known to recur forever: it references an unbounded
  * `Schedule` constructor and no bounding function, or it is an options object without `times`,
- * `until` or `while` whose `schedule` is unbounded. Policies held in variables are not judged.
+ * `until` or `while` whose `schedule` is unbounded or omitted. Policies held in variables are not
+ * judged.
  */
 const isUnboundedPolicy = (sourceCode: SourceCode, policy: ESTree.Node): boolean => {
   if (policy.type === 'ObjectExpression') {
@@ -78,7 +103,12 @@ const isUnboundedPolicy = (sourceCode: SourceCode, policy: ESTree.Node): boolean
     }
 
     const schedule = policy.properties.find((property) => getPropertyName(property) === 'schedule');
-    return schedule?.type === 'Property' && isUnboundedPolicy(sourceCode, schedule.value);
+    if (schedule === undefined) {
+      // Effect defaults to an unbounded schedule when the options have no policy of their own.
+      return keys.every((key) => key !== null);
+    }
+
+    return schedule.type === 'Property' && isUnboundedPolicy(sourceCode, schedule.value);
   }
 
   const members = collectScheduleMembers(sourceCode, policy);
@@ -109,7 +139,7 @@ export const noUnboundedRetry = defineRule({
           return;
         }
 
-        const policy = node.arguments.length >= 2 ? node.arguments[1] : node.arguments[0];
+        const policy = node.arguments[1] ?? node.arguments[0];
         if (policy !== undefined && isUnboundedPolicy(context.sourceCode, policy)) {
           context.report({ node, messageId: 'unbounded' });
         }

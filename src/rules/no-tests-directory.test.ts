@@ -35,6 +35,12 @@ ruleTester.run('no-tests-directory', noTestsDirectory, {
   ],
   invalid: [
     {
+      name: 'reports a tests directory in a hash alias import',
+      filename: 'apps/app/src/lib/format.test.ts',
+      code: "import { fixture } from '#/__tests__/fixture';",
+      errors: [{ messageId: 'colocateTests', data: { dir: '__tests__' } }],
+    },
+    {
       filename: 'apps/app/src/__tests__/format.test.ts',
       code: "import { extractHost } from '~/lib/format';",
       errors: [
