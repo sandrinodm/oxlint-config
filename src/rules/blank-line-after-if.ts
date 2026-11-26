@@ -1,4 +1,4 @@
-import type { Context, ESTree, Ranged, SourceCode } from 'vite-plus/lint/plugins';
+import type { Context, ESTree, SourceCode } from 'vite-plus/lint/plugins';
 
 import { defineRule } from 'vite-plus/lint/plugins';
 
@@ -19,6 +19,12 @@ const CONTROL_BLOCK_TYPES = new Set([
   'SwitchStatement',
   'TryStatement',
 ]);
+
+/**
+ * Matches line directives whose effect depends on the line immediately after them.
+ */
+const NEXT_LINE_DIRECTIVE_RE =
+  /^\s*(?:oxlint-disable-next-line|eslint-disable-next-line|@ts-expect-error|@ts-ignore)\b/;
 
 /**
  * Returns `true` when `comment` is not a shebang and only whitespace precedes its starting column
@@ -48,7 +54,7 @@ const getStandaloneCommentsBefore = (
  * comment alongside its 1-based ending line number.
  */
 const getTrailingCommentInfo = (sourceCode: SourceCode, node: ESTree.Node) => {
-  let target: Ranged = node;
+  let target: ESTree.Node | ESTree.Comment = node;
   let endLine = node.loc.end.line;
 
   for (const comment of sourceCode.getCommentsAfter(node)) {
@@ -185,10 +191,46 @@ const checkCommentGap = (
 };
 
 /**
+ * Returns the object literal a `return` assembles from earlier bindings: `return { a, b }`, or one
+ * wrapped in a single call such as `return Service.of({ a, b })`. Returns `null` otherwise.
+ */
+const getReturnedObject = (statement: ESTree.Node): ESTree.ObjectExpression | null => {
+  if (statement.type !== 'ReturnStatement' || statement.argument === null) {
+    return null;
+  }
+
+  const { argument } = statement;
+  if (argument.type === 'ObjectExpression') {
+    return argument;
+  }
+  if (argument.type !== 'CallExpression') {
+    return null;
+  }
+
+  const objects = argument.arguments.filter((arg) => arg.type === 'ObjectExpression');
+  return objects.length === 1 ? (objects[0] ?? null) : null;
+};
+
+/**
+ * Returns `true` when `statement` only collects earlier bindings into an object of shorthand
+ * properties, the closing step of a layer or service constructor (`return Repo.of({ find, save
+ * })`). It gathers the steps above it rather than continuing the last one, so a blank line may
+ * separate them.
+ */
+const isShorthandAssembly = (statement: ESTree.Node): boolean => {
+  const object = getReturnedObject(statement);
+  return (
+    object !== null &&
+    object.properties.length > 0 &&
+    object.properties.every((property) => property.type === 'Property' && property.shorthand)
+  );
+};
+
+/**
  * Reports and autofixes blank lines splitting a contiguous declaration group from the following
  * `statement` when `statement`'s head expression references a declared binding. For a following
  * `IfStatement`, every leaf declaration in `group` not read by a later declaration is checked;
- * otherwise only the last.
+ * otherwise only the last. A `return` that only assembles shorthand properties is exempt.
  */
 const checkSplitStep = (
   context: Context,
@@ -197,7 +239,7 @@ const checkSplitStep = (
   firstNextLine: number,
 ): void => {
   const lastDecl = group.at(-1);
-  if (lastDecl === undefined) {
+  if (lastDecl === undefined || isShorthandAssembly(statement)) {
     return;
   }
 
@@ -234,7 +276,7 @@ const checkSplitStep = (
  * Reports and autofixes a missing blank line after a control-flow statement in
  * `CONTROL_BLOCK_TYPES` before `next` (or its leading standalone comments). Consecutive `if`
  * statements sharing a condition subject are exempt; autofix preserves CRLF/LF endings and inserts
- * after any same-line trailing comment.
+ * after trailing comments. Next-line directives move with the statement they apply to.
  */
 const checkBlankAfterBlock = (
   context: Context,
@@ -266,6 +308,15 @@ const checkBlankAfterBlock = (
     node: curr,
     messageId: 'expectedBlankLine',
     fix(fixer) {
+      if (target.type === 'Line' && NEXT_LINE_DIRECTIVE_RE.test(target.value)) {
+        const { column, line } = target.loc.start;
+        const prefix = (sourceCode.lines[line - 1] ?? '').slice(0, column);
+        const start = target.range[0] - (prefix.length - prefix.trimEnd().length);
+        const nextLine = sourceCode.lines[firstNextLine - 1] ?? '';
+        const indent = nextLine.slice(0, nextLine.length - nextLine.trimStart().length);
+        return fixer.replaceTextRange([start, target.range[0]], lineBreak.repeat(2) + indent);
+      }
+
       return fixer.insertTextAfter(target, insertion);
     },
   });

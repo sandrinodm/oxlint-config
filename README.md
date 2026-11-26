@@ -123,6 +123,7 @@ Things to know:
 
 - `@effect/tsgo` pins exact Oxlint, tsrs and TypeScript versions. After upgrading `vite-plus` or `typescript`, wait for a matching `@effect/tsgo` release. Its `peerDependency` range here is `^0.73.4`.
 - It ships native builds for Linux, macOS and Windows (x64 and arm64), but not for Linux musl (Alpine).
+- `typescript/explicit-module-boundary-types` is off: Effect code relies on inferred `Effect<A, E, R>` types, and the `effecttsgo/*` rules check the error and requirement channels instead.
 - For editor diagnostics, follow the [`@effect/tsgo` setup](https://github.com/Effect-TS/tsgo#readme) and set `"diagnostics": false` in its tsconfig plugin entry so Effect diagnostics aren't reported twice.
 
 To change a rule, override it like any other:
@@ -147,7 +148,9 @@ Rule reference: [Effect-TS/tsgo/docs/rules](https://github.com/Effect-TS/tsgo/tr
 - A `no-restricted-imports` rule banning Zod (use Effect Schema) and `../../../` imports.
 - Effect conventions from the `slop/*` rules: named `Effect.fn` spans, `Effect.run*` only in entrypoints, no catch-all handlers that swallow failures, no retry policies that never stop. They only apply to names imported from `effect`, `effect/*` or `@effect/*`.
 - Effect idioms that Cloudflare's rules would report stay allowed: `Effect.gen` without `yield` (`eslint/require-yield` is off), namespace imports of local modules (`import * as Body from './body.ts'`), data-first calls such as `Effect.catch(effect, handler)`, and `cause` as well as `error` for rejection handler parameters.
+- `slop/require-jsdoc` doesn't ask for JSDoc on brand markers (`readonly brand: unique symbol`), and `slop/blank-line-after-if` allows a blank line before a `return` that only collects earlier bindings (`return Repo.of({ find, save })`).
 - In `*.test.*` and `*.spec.*` files: the vitest plugin, no size limits, and no fixed sleeps. Tests, stories, fixtures, `.d.ts` files and `vite.config.ts` don't need JSDoc.
+- Cloudflare disables `no-explicit-any`, `no-non-null-assertion`, `no-unsafe-argument`, `no-unsafe-assignment`, `no-unsafe-member-access`, `only-throw-error`, and `unbound-method` for TypeScript files with a `.test`, `.spec`, `.integration`, or `.e2e` suffix before the extension and for TypeScript files under `__tests__/`.
 
 **Format** (`fmtConfig`):
 
@@ -169,7 +172,7 @@ Rule reference: [Effect-TS/tsgo/docs/rules](https://github.com/Effect-TS/tsgo/tr
 | `slop/no-fixed-sleep-in-tests`     | `setTimeout` / `Bun.sleep` in tests                                                                                        |                                          |
 | `slop/kebab-case-imports`          | non-kebab-case local import paths                                                                                          | `workspaceScopes`                        |
 | `slop/no-tests-directory`          | `__tests__` directories, and imports through them                                                                          | `workspaceScopes`                        |
-| `slop/blank-line-after-if`         | a missing blank line after a control block                                                                                 |                                          |
+| `slop/blank-line-after-if`         | a missing blank line after a control block, or a blank line between a value and the statement that uses it                 |                                          |
 | `slop/no-throw-in-effect-gen`      | `throw` inside `Effect.gen` / `Effect.fn`                                                                                  |                                          |
 | `slop/no-console-in-effect-gen`    | `console.*` inside Effect generators                                                                                       |                                          |
 | `slop/effect-fn-conventions`       | `Effect.fn` without a span name, a span name that doesn't match its binding, `.pipe` on an `Effect.fn` function            | `matchName`                              |
@@ -206,18 +209,14 @@ const query = omitUndefined({ limit: params.limit, cursor: params.cursor });
 The preset doesn't ship `omitUndefined`, because a lint config shouldn't be a runtime dependency. A version that type-checks under `exactOptionalPropertyTypes` without casts:
 
 ```ts
-export type OmitUndefined<T> = {
-  readonly [K in keyof T as undefined extends T[K] ? never : K]: T[K];
-} & {
-  readonly [K in keyof T as undefined extends T[K] ? K : never]?: Exclude<T[K], undefined>;
-};
-
-export function omitUndefined<T extends object>(value: T): OmitUndefined<T>;
+/**
+ * Copies an object's own enumerable properties with defined values, including symbol keys.
+ */
 export function omitUndefined<T extends object>(value: T): Partial<T> {
-  const result: Partial<T> = {};
-  for (const key in value) {
-    if (Object.hasOwn(value, key) && value[key] !== undefined) {
-      result[key] = value[key];
+  const result: Partial<T> = { ...value };
+  for (const key of Reflect.ownKeys(result)) {
+    if (Reflect.get(result, key) === undefined) {
+      Reflect.deleteProperty(result, key);
     }
   }
 
@@ -229,7 +228,7 @@ The four Effect rules follow Effect's own guidance (the `AGENTS.md` shipped in t
 
 - `Effect.fn("name")` creates a tracing span, so it needs a name, and the name should match the function: `const query = Effect.fn("query")` or `Effect.fn("Database.query")`. Use `Effect.fnUntraced` for functions that shouldn't create a span. Pass combinators as extra arguments instead of piping: `Effect.fn("f")(function* () { … }, Effect.catch(…))`.
 - Run effects once at the program's edge: `NodeRuntime.runMain` / `BunRuntime.runMain` in entrypoints, `ManagedRuntime` in framework adapters, `it.effect` from `@effect/vitest` in tests. Turn the rule off for adapter files with an override.
-- Recover from specific errors with `catchTag`, log before recovering, or make discarding explicit with `Effect.ignore`.
+- Recover from specific errors with `catchTag`, log before recovering, or make the intent explicit with `Effect.orElseSucceed` (fallback value) or `Effect.ignore` (discard).
 - Bound retries with `Schedule.recurs`, `Schedule.during` or `Schedule.upTo`, or pass `{ schedule, times }`. `Effect.repeat` forever is allowed; that's a normal daemon loop.
 
 `workspaceScopes` lists package-scope prefixes, such as `['@acme/']`. Subpaths under those scopes are checked like local files; other scoped packages count as external.

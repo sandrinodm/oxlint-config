@@ -1,6 +1,7 @@
 import { defineRule } from 'vite-plus/lint/plugins';
 
 import {
+  IMPORT_SUFFIX_RE,
   WORKSPACE_SCOPES_SCHEMA,
   createImportSpecifierVisitor,
   getCheckedStartIndex,
@@ -24,6 +25,11 @@ const DUNDER_SEGMENT_RE = /^__[a-z0-9]+(?:-[a-z0-9]+)*(?:__)?(?:\.[a-z0-9]+)*$/;
  * exempted from kebab-case enforcement.
  */
 const GENERATED_ROUTE_TREE_RE = /^routeTree\.gen(?:\.[cm]?[jt]sx?)?$/;
+
+/**
+ * Matches a leading dot on a directory name without matching relative path markers.
+ */
+const DOT_DIRECTORY_RE = /^\.[^.]/;
 
 /**
  * Converts a dot-delimited filename part from camelCase, PascalCase, acronym runs, underscores, or
@@ -79,7 +85,7 @@ const getSuggestedKebabSpecifier = (
   rawSpecifier: string,
   workspaceScopes: ReadonlyArray<string>,
 ): string | null => {
-  const queryIndex = rawSpecifier.search(/[?#]/);
+  const queryIndex = rawSpecifier.search(IMPORT_SUFFIX_RE);
   const pathPart = queryIndex === -1 ? rawSpecifier : rawSpecifier.slice(0, queryIndex);
   const suffix = queryIndex === -1 ? '' : rawSpecifier.slice(queryIndex);
 
@@ -89,14 +95,19 @@ const getSuggestedKebabSpecifier = (
     return null;
   }
 
-  const checkedSegments = segments.slice(startIndex);
-  if (checkedSegments.every(isValidSegment)) {
+  const checkedSegments = segments.slice(startIndex).map((segment, index) => {
+    const isDotDirectory =
+      startIndex + index < segments.length - 1 && DOT_DIRECTORY_RE.test(segment);
+    const prefix = isDotDirectory ? '.' : '';
+    return { prefix, name: segment.slice(prefix.length) };
+  });
+  if (checkedSegments.every(({ name }) => isValidSegment(name))) {
     return null;
   }
 
   const expectedSegments = [
     ...segments.slice(0, startIndex),
-    ...checkedSegments.map(toKebabSegment),
+    ...checkedSegments.map(({ prefix, name }) => prefix + toKebabSegment(name)),
   ];
   return `${expectedSegments.join('/')}${suffix}`;
 };

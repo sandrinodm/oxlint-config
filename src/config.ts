@@ -153,25 +153,22 @@ export default {
       },
     },
     {
-      files: [
-        '**/*.test.{ts,tsx}',
-        '**/*.spec.{ts,tsx}',
-        '**/*.fixture.{ts,tsx}',
-        '**/*.stories.{ts,tsx}',
-        '**/*.d.ts',
-        '**/vite.config.ts',
-      ],
+      files: ['**/*.fixture.{ts,tsx}', '**/*.stories.{ts,tsx}', '**/*.d.ts', '**/vite.config.ts'],
       rules: {
         'slop/require-jsdoc': 'off',
       },
     },
     {
-      files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
+      files: ['**/*.test.*', '**/*.spec.*'],
       plugins: ['vitest'],
       rules: {
+        'eslint/complexity': 'off',
+        'eslint/max-depth': 'off',
+        'eslint/max-params': 'off',
         'eslint/max-lines': 'off',
         'eslint/max-lines-per-function': 'off',
         'slop/no-fixed-sleep-in-tests': 'error',
+        'slop/require-jsdoc': 'off',
         'vitest/consistent-test-it': ['error', { fn: 'it', withinDescribe: 'it' }],
         'vitest/no-disabled-tests': 'error',
         'vitest/no-focused-tests': 'error',

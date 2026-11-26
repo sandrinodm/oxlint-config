@@ -9,16 +9,19 @@ import { getInspectableCommentBody } from '../internal/comment-body.ts';
 const DOC_LINE_PREFIX_RE = /^\s*\*\s?/;
 
 /**
- * Matches decorative ASCII or box-drawing divider lines and editor folding directives at the start
- * or end of a normalized comment line.
+ * Matches decorative ASCII or box-drawing dividers at the start or end of a comment line.
  */
 const BANNER_COMMENT_RE =
-  /^\s*(?:[-=*#~_+/]{3,}|[─━═▬■]{2,}|#?region\b|#?endregion\b|.*\s(?:[-=*#~_]{4,}|[─━═]{2,})\s*$)/i;
+  /^\s*(?:(?!\*\*\/)[-=*#~_+/]{3,}|[─━═▬■]{2,}|.*\s(?:[-=*#~_]{4,}|[─━═]{2,})\s*$)/i;
+
+/**
+ * Matches lowercase editor folding markers, with or without a leading hash.
+ */
+const FOLDING_MARKER_RE = /^\s*#?(?:end)?region\b(?!-)/;
 
 /**
  * Oxlint suggestion rule (`slop/no-banner-comments`) inspecting every non-exempt comment on
- * `Program` and reporting lines matching `BANNER_COMMENT_RE` (decorative dividers or editor folding
- * markers). Does not provide an autofix.
+ * `Program` and reporting decorative dividers or editor folding markers. Provides no autofix.
  */
 export const noBannerComments = defineRule({
   meta: {
@@ -37,8 +40,12 @@ export const noBannerComments = defineRule({
             continue;
           }
 
-          const lines = body.split(/\r?\n/).map((line) => line.replace(DOC_LINE_PREFIX_RE, ''));
-          if (lines.some((line) => BANNER_COMMENT_RE.test(line))) {
+          const lines = body.split(/\r?\n/);
+          const hasBanner = lines.some((line) => {
+            const content = comment.type === 'Block' ? line.replace(DOC_LINE_PREFIX_RE, '') : line;
+            return BANNER_COMMENT_RE.test(content) || FOLDING_MARKER_RE.test(content);
+          });
+          if (hasBanner) {
             context.report({ loc: comment.loc, messageId: 'banner' });
           }
         }

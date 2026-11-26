@@ -16,6 +16,85 @@ const ruleTester = new RuleTester({
 
 ruleTester.run('require-jsdoc', requireJsDoc, {
   valid: [
+    {
+      name: 'accepts an undocumented brand marker in a schema class heritage type argument',
+      options: [{ requireEffectSchemaJsDoc: true }],
+      code: `import { Schema } from 'effect';
+/**
+ * Raised when a user is missing.
+ */
+export class UserNotFound extends Schema.TaggedError<UserNotFound, { readonly brand: unique symbol }>()(
+  'UserNotFound',
+  {
+    /**
+     * The id that was looked up.
+     */
+    id: Schema.String,
+  },
+) {}`,
+    },
+    {
+      name: 'accepts an undocumented brand marker in an interface',
+      code: `/**
+ * Branded user id.
+ */
+export interface UserIdBrand {
+  readonly brand: unique symbol;
+}`,
+    },
+    {
+      name: 'accepts JSDoc before a decorator that precedes the export',
+      code: `import { decorate } from './decorators';
+/**
+ * Describes the class.
+ */
+@decorate
+export class Example {}`,
+    },
+    {
+      name: 'accepts JSDoc between a decorator and the export',
+      code: `import { decorate } from './decorators';
+@decorate
+/**
+ * Describes the class.
+ */
+export class Example {}`,
+    },
+    {
+      name: 'accepts JSDoc before an export that precedes the decorator',
+      code: `import { decorate } from './decorators';
+/**
+ * Describes the class.
+ */
+export @decorate class Example {}`,
+    },
+    {
+      name: 'uses the first method signature JSDoc for the overload group',
+      code: `/**
+ * Holds values.
+ */
+export class Store {
+  /**
+   * Reads a value by key.
+   */
+  get(key: string): string;
+  get(key: number): number;
+  get(key: unknown): unknown {
+    return key;
+  }
+}`,
+    },
+    {
+      name: 'uses the first function signature JSDoc for the overload group',
+      code: `/**
+ * Reads a value by key.
+ */
+export function get(key: string): string;
+export function get(key: number): number;
+export function get(key: unknown): unknown {
+  return key;
+}`,
+    },
     // Documented class, interface, type alias, functions, top-level consts, and object properties
     `/**
  * Widget container.
@@ -347,6 +426,16 @@ export function run(): void {
     },
   ],
   invalid: [
+    {
+      name: 'reports a plain symbol property that is not a brand marker',
+      code: `/**
+ * Keyed record.
+ */
+export interface Keyed {
+  readonly key: symbol;
+}`,
+      errors: [{ messageId: 'missingJsDoc', data: { kind: 'PropertySignature', name: 'key' } }],
+    },
     // Reports every supported documentable declaration kind when undocumented
     {
       code: `export class Widget {

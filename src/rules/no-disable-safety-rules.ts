@@ -8,11 +8,14 @@ const PROTECTED_SAFETY_RULES = [
   'no-explicit-any',
   'no-unsafe-',
   'no-non-null-assertion',
+  'ban-ts-comment',
   'no-floating-promises',
   'no-chained-type-assertions',
   'no-disable-safety-rules',
   'no-fixed-sleep-in-tests',
   'no-test-doubles',
+  'no-focused-tests',
+  'no-disabled-tests',
 ];
 
 /**

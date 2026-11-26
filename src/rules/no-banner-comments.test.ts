@@ -16,6 +16,28 @@ const ruleTester = new RuleTester({
 
 ruleTester.run('no-banner-comments', noBannerComments, {
   valid: [
+    {
+      name: 'allows region prose in JSDoc',
+      code: `/**
+ * Region the bucket lives in.
+ */
+export const region = 'auto';`,
+    },
+    {
+      name: 'allows prose that starts with region',
+      code: `// Region names are case-sensitive.
+export {};`,
+    },
+    {
+      name: 'allows a hyphenated word that starts with region',
+      code: `// Region-specific endpoint.
+export const endpoint = 'x';`,
+    },
+    {
+      name: 'allows a comment that starts with a test glob',
+      code: `// **/*.test.ts files get the vitest plugin.
+export const x = 1;`,
+    },
     `// Normal explanation of why retries are capped at 3.
 export const MAX_RETRIES = 3;`,
     `/**
@@ -33,6 +55,18 @@ export const x = 1;`,
 import './side-effect.ts';`,
   ],
   invalid: [
+    {
+      name: 'reports a banner that mentions oxlint',
+      code: `// ======== oxlint config ========
+export const x = 1;`,
+      errors: [{ messageId: 'banner' }],
+    },
+    {
+      name: 'reports an asterisk divider',
+      code: `// *****
+export const x = 1;`,
+      errors: [{ messageId: 'banner' }],
+    },
     {
       code: `// ── Helpers ──
 export const helper = (): number => 1;`,
@@ -53,6 +87,14 @@ export const x = 1;`,
 export const x = 1;
 // #endregion`,
       errors: [{ messageId: 'banner' }, { messageId: 'banner' }],
+    },
+    {
+      name: 'reports folding markers without a hash',
+      code: `//region Helpers
+// region Helpers
+export const x = 1;
+// endregion Helpers`,
+      errors: [{ messageId: 'banner' }, { messageId: 'banner' }, { messageId: 'banner' }],
     },
     {
       code: `/*

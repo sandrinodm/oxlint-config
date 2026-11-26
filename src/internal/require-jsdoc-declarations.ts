@@ -64,9 +64,8 @@ const createDescriptor = (
 });
 
 /**
- * Returns the enclosing `ExportNamedDeclaration` or `ExportDefaultDeclaration` when `node` is its
- * direct declaration, or `node` itself otherwise, so JSDoc placed above an `export` keyword
- * resolves to the declaration.
+ * Returns the direct export wrapper so JSDoc can precede the export keyword. Returns the node
+ * itself when it is not wrapped by an export.
  */
 const getExportOrSelf = (node: ESTree.Node): ESTree.Node => {
   if (
@@ -184,6 +183,20 @@ const isDocumentableTypeMember = (parent: ESTree.Node): boolean => {
   }
 
   return parent.parent.type === 'TSTypeAliasDeclaration' || isClassExtendsTypeArgument(parent);
+};
+
+/**
+ * Returns `true` for a nominal brand marker such as `readonly brand: unique symbol`, the form
+ * `effecttsgo/schema-class-missing-brand` asks for. It exists only for the type checker and has no
+ * contract to document.
+ */
+const isBrandMarker = (node: ESTree.TSPropertySignature): boolean => {
+  const type = node.typeAnnotation?.typeAnnotation;
+  return (
+    type?.type === 'TSTypeOperator' &&
+    type.operator === 'unique' &&
+    type.typeAnnotation.type === 'TSSymbolKeyword'
+  );
 };
 
 /**
@@ -389,7 +402,11 @@ export const getDocumentableDeclaration = (
   if (node.type === 'PropertyDefinition') {
     return classifyPropertyDefinition(node, sourceCode);
   }
-  if (node.type === 'TSPropertySignature' && isDocumentableTypeMember(node.parent)) {
+  if (
+    node.type === 'TSPropertySignature' &&
+    isDocumentableTypeMember(node.parent) &&
+    !isBrandMarker(node)
+  ) {
     return createDescriptor('PropertySignature', getNodeText(sourceCode, node.key), node, node);
   }
   if (node.type === 'TSMethodSignature' && isDocumentableTypeMember(node.parent)) {

@@ -27,6 +27,18 @@ ruleTester.run('no-effect-run-outside-entry', noEffectRunOutsideEntry, {
     'const Effect = { runPromise: (x: unknown) => x };\nEffect.runPromise(1);',
   ],
   invalid: [
+    ...[
+      'runPromiseWith',
+      'runPromiseExitWith',
+      'runSyncWith',
+      'runSyncExitWith',
+      'runForkWith',
+      'runCallbackWith',
+    ].map((name) => ({
+      name: `reports Effect.${name} outside an entrypoint`,
+      code: `${EFFECT}const value = Effect.${name}(context)(program);`,
+      errors: [{ messageId: 'run', data: { name } }],
+    })),
     {
       code: `${EFFECT}export const load = () => Effect.runPromise(program);`,
       errors: [{ messageId: 'run', data: { name: 'runPromise' } }],

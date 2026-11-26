@@ -16,6 +16,10 @@ const ruleTester = new RuleTester({
 
 ruleTester.run('kebab-case-imports', kebabCaseImports, {
   valid: [
+    {
+      name: 'allows a dot-prefixed directory with a kebab-case name',
+      code: "import { decorate } from '../.storybook/decorators';",
+    },
     "import { FooBar } from './foo-bar.tsx';",
     "import { FooBar } from './foo-bar';",
     "import type { FooBar } from './foo-bar.tsx';",
@@ -41,6 +45,29 @@ ruleTester.run('kebab-case-imports', kebabCaseImports, {
     "type Foo = import('./foo-bar.tsx').Foo;",
   ],
   invalid: [
+    {
+      name: 'preserves the leading dot when suggesting a directory name',
+      code: "import { decorate } from '../.Storybook/decorators';",
+      errors: [
+        {
+          messageId: 'mustBeKebabCase',
+          data: {
+            actual: '../.Storybook/decorators',
+            expected: '../.storybook/decorators',
+          },
+        },
+      ],
+    },
+    {
+      name: 'checks hash alias imports and preserves the suffix',
+      code: "import '#/BadFile?url#fragment';",
+      errors: [
+        {
+          messageId: 'mustBeKebabCase',
+          data: { actual: '#/BadFile?url#fragment', expected: '#/bad-file?url#fragment' },
+        },
+      ],
+    },
     {
       code: "import { FooBar } from './FooBar.tsx';",
       errors: [
