@@ -4,7 +4,7 @@ catalog:
   '@cloudflare/oxlint-config': 0.2.0
   '@effect/tsgo': 0.73.7
   '@types/node': 26.6.11
-  effect: 4.1.6
+  effect: 4.1.7
   typescript: ^7.0.2
   vite: npm:@voidzero-dev/vite-plus-core@8.3.8001
   vite-plus: 1.8.0
@@ -29,4 +29,4 @@ minimumReleaseAgeExclude:
   - '@effect/tsgo-win32-x64@0.73.7'
   - '@effect/tsgo@0.73.7'
   - '@types/node@26.6.11'
-  - effect@4.1.6
+  - effect@4.1.7
